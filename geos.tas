@@ -2,7 +2,7 @@
 ;GEOS Kernal makefile
 ;by Maciej 'YTM/Elysium' Witkowiak
 ;19,20-3-99; 20-4; 6-6; 17-8
-;27.07.2000, 1.8.2000, 15.7.2001
+;27.07.2000, 1.8.2000, 15-16.7.2001
 
 ;This is makefile for GEOS KERNAL
 
@@ -26,22 +26,22 @@ prntDrvMemBuff	= $d9c0		;$0640 len -> $e000
 ;rules for compiling
 !source "inc/equ.inc"
 
-		    *=InitKernal
+		    *=$4a00
+!source "relocator.tas"
+		    !fill $4c00-*,0
+		    !pseudopc InitKernal
+;		    *=InitKernal
 !source "src/booter.tas"
+		    !realpc
+		    !fill $5000-*,0
 
-		    *=DISK_BASE
-!source "drv1541.tas"
-
-;		    *=DISK_BASE+DISK_DRV_LGH
-		    !fill DISK_BASE+DISK_DRV_LGH-*, 0
-!source "src/lokernal.tas"
-
+		    !pseudopc OS_ROM
 ;		    *=$bff0
 ;bf40 - some junk here?
 ;		!byte $49, $00, $fc, $b8, $01, $20, $c4, $1a
 ;		!byte $00, $00, $bc, $b8, $03, $04, $70, $08
 ;
-		    *=OS_ROM
+;		    *=OS_ROM
 ;		    !fill OS_ROM-*,0
 !source "src/kernal1-1.tas"
 ;		    *=OS_JUMPTAB
@@ -80,3 +80,32 @@ PatternTab	!binary "bin/patterns.bin"	    ;cef0
 		JSR ExecCBMKernal
 		}
 		RTS				;fff3
+
+		    !realpc
+		    !fill DISK_BASE-*,0
+
+;		    *=DISK_BASE
+!source "drv1541.tas"
+
+;		    *=DISK_BASE+DISK_DRV_LGH
+		    !fill DISK_BASE+DISK_DRV_LGH-*, 0
+!source "src/lokernal.tas"
+
+		    !fill $a000-*,0
+		    !pseudopc $e000
+;    *=$e000
+!source "src/bank0/upper.tas"
+		    !fill $fd00-*,0
+;    *=$fd00
+!source	"src/bank0/bankops.tas"
+		    !fill $ff05-*,0
+;    *=$ff05
+!source	"src/bank0/lastpage.tas"
+		    !realpc
+		    !fill $c000-*,0
+;    *=$c000
+EC000		!binary "src/bank0/bin/unknown.bin"	;was $d100+$10, kinda table for font handling
+BSWFont		!binary "src/bank0/bin/bswfnt40.bin"	;40 column BSW 9 point
+BSWFont80	!binary "src/bank0/bin/bswfnt80.bin"	;80 column BSW 9 point (a bit wider than 40)
+;c78d
+!source "src/bank0/lower.tas"
