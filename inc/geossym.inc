@@ -106,10 +106,7 @@ msePicPtr		=	$31
 windowTop		=	$33
 windowBottom		=	$34
 leftMargin		=	$35
-IO_IN			=	$35
-KRNL_IO_IN		=	$36
 rightMargin		=	$37
-KRNL_BAS_IO_IN		=	$37
 pressFlag		=	$39
 mouseXPos		=	$3a
 mouseYPos		=	$3c
@@ -240,8 +237,6 @@ DISK_BASE		=	$9000
 SCREEN_BASE		=	$a000
 OS_ROM			=	$c000
 OS_JUMPTAB		=	$c100
-RAMC_BASE		=	$de00
-RAMC_WINDOW		=	$df00
 EXP_BASE		=	$df00
 MOUSE_BASE_128		=	$fd00
 MOUSE_JMP_128		=	$fd00
@@ -316,3 +311,8 @@ clkreg			=	$d030
 vdcreg			=	$d600
 vdcdata 		=	$d601
 ;
+
+;RamExpansions CR
+PLUS60K_CR		=	$d100
+RAMC_BASE		=	$de00
+RAMC_WINDOW		=	$df00
