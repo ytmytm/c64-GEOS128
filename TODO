@@ -1,3 +1,4 @@
+- VDC screen positioning dont work
 - try binary drivers for 1571 and 1581 for boot
 + replace numbers by register names in all calls to NormalizeX
 + apply all hints
@@ -5,9 +6,9 @@
 + look if 2MHz can be ON during keyboardscanning (use geoPatch on living kernal)
 - look what can be done with relocatable stack/zpage for IRQ (to avoid copying data)
 - look what can be done with relocatable stack and PHA/PLA for memory copying/fill functions
-- look what can be done with Z80
+- look what can be done with Z80 (and string operations)
 - look how VDC code can be speed-up with blitter abilities
-    (horizontalline, imprint, recover)
+    (only imprint/recover)
 
 Proposed Layout: bank0
 

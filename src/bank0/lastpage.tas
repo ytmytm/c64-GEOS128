@@ -19,30 +19,29 @@ IRQHandler					;ff05
 		PLA
 EndInterrupt	RTI				;ff25
 
-;normalize address?
-EFF26		LDA zpage+1,x			;ff26
-		BPL EFF3D
+NormalizeXB0	LDA zpage+1,x			;ff26
+		BPL Norm_XB01
 		ROL
-		BMI EFF4F
+		BMI Norm_XB03
 		ROR
-		+bbrf 7, graphMode, EFF38
+		+bbrf 7, graphMode, Norm_XB00
 		+addv $60
 		ROL zpage,x
 		ROL
-EFF38		AND #$1f			;ff38
+Norm_XB00	AND #%00011111			;ff38
 		STA zpage+1,x
 		RTS
-EFF3D		ROL				;ff3d
-		BPL EFF4F
+Norm_XB01	ROL				;ff3d
+		BPL Norm_XB03
 		ROR
-		+bbrf 7, graphMode, EFF4B
+		+bbrf 7, graphMode, Norm_XB02
 		SEC
 		ADC #$a0
 		ROL zpage,x
 		ROL
-EFF4B		ORA #$e0			;ff4b
+Norm_XB02	ORA #$e0			;ff4b
 		STA zpage+1,x
-EFF4F		RTS				;ff4f
+Norm_XB03	RTS				;ff4f
 
 						;ff50
 LineTabL	!byte $00, $40, $80, $c0, $00, $40, $80, $c0

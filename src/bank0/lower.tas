@@ -242,7 +242,7 @@ EC9B7		LDY r3L
 		LDY r3H
 		AND E1B6D,y
 		ORA E1C2D,y
-		JSR EF573
+		JSR StaFrontbuffer80
 		INC r3H
 		INC r5L
 		BNE EC9D1
@@ -448,12 +448,12 @@ ECB68		LDA EC826-1,x			;cb68
 ECB86		LDX r1L				;cb86
 		LDY #0
 		LDA (r3),y
-		JSR EF573
+		JSR StaFrontbuffer80
 		INY
 		DEX
 		BEQ ECBA1
 ECB93		BIT vdcreg			;cb93
-		BPL ECB93
+		BPL *-3
 		LDA (r3),y
 		STA vdcdata
 		INY
@@ -551,8 +551,8 @@ ECC45		LDA E132B,x			;cc45
 		INY
 		DEX
 		BEQ ECC70
-ECC5C		LDA vdcreg			;cc5c
-		BPL ECC5C
+ECC5C		BIT vdcreg			;cc5c
+		BPL *-3
 		LDA vdcdata
 		STA (r12),y
 		ORA E1B45,y
@@ -570,12 +570,12 @@ ECC7E		LDA E132B,x			;cc7e
 		TAX
 		LDY #0
 		LDA E1B4C,y
-		JSR EF573
+		JSR StaFrontbuffer80
 		INY
 		DEX
 		BEQ ECC9D
 ECC8E		BIT vdcreg			;cc8e
-		BPL ECC8E
+		BPL *-3
 		LDA E1B4C,y
 		STA vdcdata
 		INY
@@ -652,7 +652,7 @@ ECD22		LDX r2L				;cd22
 		JSR ECCD1
 ECD2B		LDY r3L				;cd2b
 		LDA E1B55,y
-		JSR EF573
+		JSR StaFrontbuffer80
 		INC r3L
 		INC r5L
 		BNE ECD3B
