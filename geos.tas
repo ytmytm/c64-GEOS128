@@ -18,21 +18,20 @@
 !source "inc/diskdrv.inc"
 !source "inc/equ.inc"
 
-;part of memory config
+;part of bank1 memory config
 fileHeadMemBuff	= $d8c0		;$0100 len
 prntDrvMemBuff	= $d9c0		;$0640 len -> $e000
 
 ;rules for compiling
 !source "inc/equ.inc"
 
-		    *=$5000
-InitKernal
+		    *=InitKernal
 !source "src/booter.tas"
 
-		    *=$9000
+		    *=DISK_BASE
 !source "drv1541.tas"
 
-		    *=$9d80
+		    *=DISK_BASE+DISK_DRV_LGH
 !source "src/lokernal.tas"
 
 		    *=$bff0

@@ -161,6 +161,7 @@ bank0SaveA	=	$8898
 bank0SavePS	=	$8899
 
 ;GEOS BOOT and REU reboot adresses
+InitKernal	=	$5000
 BVBuff		=	$0400
 RunREU		=	$6000
 
