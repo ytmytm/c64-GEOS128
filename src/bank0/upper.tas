@@ -1914,7 +1914,8 @@ _FrameRectangle_ 				;efb3
 		+PopW r3
 		RTS
 
-GetInlineDrwParms				;eff8
+;!!!hint This is never called in bank0
+;GetInlineDrwParms				;eff8
 		+PopW r5
 		+PopW returnAddress
 		LDY #1
@@ -1936,7 +1937,8 @@ GetInlineDrwParms				;eff8
 		LDA (returnAddress),Y
 		STA r4H
 		+PushW r5
-GtDrwPrmsEnd	RTS
+;GtDrwPrmsEnd
+		RTS
 
 BitMask1	!byte $80, $40, $20, $10, $08, $04, $02		;f02a
 BitMask2	!byte $01, $02, $04, $08, $10, $20, $40, $80	;f031
