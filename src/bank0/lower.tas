@@ -12,15 +12,9 @@ E132B	= $132b
 E1333	= $1333
 E133B	= $133b		; data tables up to 1b45
 
-E1B45	= $1b45
-E1B46	= $1b46
-E1B47	= $1b47
-E1B48	= $1b48
-E1B49	= $1b49
-E1B4A	= $1b4a
-E1B4B	= $1b4b
+E1B45	= $1b45		; 7 byte buffer
 E1B4C	= $1b4c
-E1B54	= $1b54
+E1B54	= $1b54		; dirty flag - if nonzero sprites are redrawn
 E1B55	= $1b55
 E1B6D	= $1b6d		; data of 192(200?) bytes
 E1C2D	= $1c2d		; as above
@@ -312,7 +306,6 @@ ECA0F		DEY				;ca0f
 		RTS
 
 ; compare real status to own copy (last drawn?)
-; 1b54 - kind of 'dirty' flag
 ;ca15
 ECA15		LDA E1B54			;ca15
 		BNE ECA5B
@@ -511,8 +504,8 @@ ECBA1		TYA				;cba1
 
 ;cbb9
 ECBB9		LDY #0				;cbb9
-		STY E1B48
-		STY E1B4B
+		STY E1B45+3
+		STY E1B45+6
 ECBC1		LDA (r4),y			;cbc1
 		STA E1B45,y
 		INY
@@ -535,17 +528,17 @@ ECBDE		LDA r8H				;cbde
 		LDA r10L
 		BNE ECBF6
 ECBEB		LSR E1B45			;cbeb
-		ROR E1B46
+		ROR E1B45+1
 		DEX
 		BNE ECBEB
 		BEQ ECC0E
 ECBF6		LSR E1B45			;cbf6
-		ROR E1B46
-		ROR E1B47
-		ROR E1B48
-		ROR E1B49
-		ROR E1B4A
-		ROR E1B4B
+		ROR E1B45+1
+		ROR E1B45+2
+		ROR E1B45+3
+		ROR E1B45+4
+		ROR E1B45+5
+		ROR E1B45+6
 		DEX
 		BNE ECBF6
 ECC0E		LDX r0L
@@ -556,10 +549,10 @@ ECC0E		LDX r0L
 ECC13		BIT r11H			;cc13 !!!hint macro
 		BMI ECC1F
 		LDX #4
-		LDA E1B47
+		LDA E1B45+2
 		JSR ECC2C
 ECC1F		LDX #2				;cc1f
-		LDA E1B46
+		LDA E1B45+1
 		JSR ECC2C
 		LDX #0
 		LDA E1B45
@@ -567,7 +560,7 @@ ECC2C		STA r2L				;cc2c
 		AND #$0f
 		TAY
 		LDA EC834,y
-		STA E1B46,x
+		STA E1B45+1,x
 		LDA r2L
 		LSR
 		LSR
