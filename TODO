@@ -1,3 +1,11 @@
+- currently system boot has some bugs:
+    - no disk init (do OpenDisk before disk calls)
+    - auto-exec calls don't work (system error, try GEOS64 booter code)
+    - there's no loader, but code could be safely loaded from BASIC (AFAIK)
+- reassemble C128's 1541 driver (only Init/DoneForIO should differ), because for
+  yet unknown reasons 1541 cpu jams when using binary only code, good enough that
+  GEOS64 1541 code can be used for now
+- try binary drivers for 1571 and 1581 for boot
 + replace numbers by register names in all calls to NormalizeX
 + apply all hints
 + change all jumps to kernal table (except diskdrv) by appropriate single underscore jump
@@ -5,3 +13,4 @@
 - look what can be done with relocatable stack/zpage for IRQ (to avoid copying data)
 - look what can be done with relocatable stack and PHA/PLA for memory copying/fill functions
 - look what can be done with Z80
+- look how VDC code can be speed-up with blitter abilities

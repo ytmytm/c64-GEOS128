@@ -23,6 +23,9 @@
 		    *=$5000
 !source "src/booter.tas"
 
+		    *=$9000
+!source "drv1541.tas"
+
 		    *=$9d80
 !source "src/lokernal.tas"
 
