@@ -18,9 +18,9 @@ _ProcessTimers_	JMP __ProcessTimers__
 __IsMseInRegion__				;d027
 		TXA
 		PHA
-		LDX #8
+		LDX #r3
 		JSR NormalizeX
-		LDX #10
+		LDX #r4
 		JSR NormalizeX
 		PLA
 		TAX

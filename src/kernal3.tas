@@ -6,7 +6,7 @@
 ;		}
 
 _GetString					;e078
-		LDX #$18
+		LDX #r11
 		JSR NormalizeX
 		+MoveW r0, string
 		+MoveB r1L, stringMargCtrl
@@ -144,7 +144,7 @@ GSHelp12	SEC				;e1f0
 
 _PutChar					;e1f2
 		PHA
-		LDX #$18
+		LDX #r11
 		JSR NormalizeX
 		PLA
 		CMP #$20
@@ -166,11 +166,11 @@ PutChar1	PHA				;e207
 		STA r13L
 		BCC *+4
 		INC r13H
-		LDX #$37			;e220
+		LDX #rightMargin		;e220
 		JSR NormalizeX
 		+CmpW rightMargin, r13
 		BCC PutChar4
-		LDX #$35
+		LDX #leftMargin
 		JSR NormalizeX
 		+CmpW leftMargin, r11
 		BEQ PutChar2
@@ -380,7 +380,7 @@ _PutDecimal					;e3e3
 		STA r11L
 		BCC *+4
 		INC r11H
-		LDX #$18
+		LDX #r11
 		JSR NormalizeX			;e3f7
 		+SubB r3H, r11L
 		BCS *+4

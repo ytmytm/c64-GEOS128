@@ -994,7 +994,7 @@ SprTabH 	!byte >spr0pic, >spr1pic, >spr2pic, >spr3pic
 		!byte >spr4pic, >spr5pic, >spr6pic, >spr7pic
 
 _PosSprite					;cc0e
-		LDX #10
+		LDX #r4
 		JSR NormalizeX
 		LDA r3L
 		ASL

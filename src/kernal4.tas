@@ -207,7 +207,7 @@ DBGFDoArrow	JSR DBGFilesHelp6		;f19b
 		LDA r0H
 		ORA E8871
 		STA r0H
-		LDX #2
+		LDX #r0
 		JSR NormalizeX
 		LDX DBGFTableIndex
 		+CmpW r0, mouseXPos
@@ -577,7 +577,7 @@ _StartMouseMode 				;f572
 		LDA r11L
 		ORA r11H
 		BEQ SMousMd1
-		LDX #$18
+		LDX #r11
 		JSR NormalizeX
 		+MoveW r11, mouseXPos
 		STY mouseYPos
