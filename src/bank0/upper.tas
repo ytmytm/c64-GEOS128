@@ -527,9 +527,7 @@ Font_35 	+CmpW rightMargin, FontTVar2
 		+CmpW leftMargin, r11
 		BCC Font_37
 Font_36 	SEC				;e453
-		RTS
-Font_37		CLC				;e455 ;!!!hint C=0 here
-		RTS
+Font_37		RTS
 
 Font_4		LDY r1L 			;e457
 		LDX FontTVar1
@@ -764,7 +762,7 @@ Font_82 	LDA Z46,y			;e61a
 		LDA E8804,y
 		ORA #1
 		STA E8804,y
-		+bra Font_84			;!!!hint BNE here is enough
+		bne Font_84
 Font_83		LDA E8805,y			;e63b
 		ORA BitMask2,x
 		STA E8805,y
@@ -774,7 +772,7 @@ Font_84 	DEX				;e644
 		LDA E8806,y
 		ORA #$80
 		STA E8806,y
-		+bra Font_86			;!!!hint BNE here is enough
+		bne Font_86
 Font_85		LDA E8805,y			;e653
 		ORA BitMask2,x
 		STA E8805,y
@@ -939,8 +937,7 @@ FontGt3 	STY Z46+3			;e795
 		LDA (r2),y
 		AND r7H
 		STA Z46+2
-		LDA Z46				;!!!hint +bra FontGt2_1
-		JMP (r12)
+		+bra FontGt2_1
 
 FontGt4 	LDA (r2),y			;e7b1
 		AND E8802
@@ -957,8 +954,7 @@ FontGt4_2	LDA (r2),y			;e7c5
 		LDA #0
 		STA Z46+1,y
 		STA Z46+2,y
-		LDA Z46				;!!!hint BEQ FontGt2_1
-		JMP (r12)
+		beq FontGt2_1
 
 ;procedures indexed from Font_Tab2, DO NOT CHANGE!
 FontSH1 	LSR				;e7d9
@@ -1080,11 +1076,9 @@ FntSh54 	ASL Z46+7			;e888
 FntSh54_End					;e8a0
 ; end of indexed table, keep on changin'
 
-EE8A0		RTS				;e8a0 ;!!!hint
-
 _BitOtherClip_					;e8a1
 		LDX #$ff
-		JMP BitmClp1			;!!!hint BNE here?
+		bne BitmClp1
 _BitmapClip_					;e8a6
 		LDX #0
 BitmClp1	STX r9H 			;e8a8
@@ -1143,7 +1137,7 @@ _BitmapUp_					;e910
 		STA mmu+6
 		+PushB r9H
 		+LoadB r9H, NULL
-		+LoadB E888D, NULL		;!!!hint STA here
+		sta E888D
 		STA r3L
 		STA r4L
 BitmUp1 	JSR BitmapUpHelp		;e92e
@@ -1277,15 +1271,11 @@ BitmDe4 	CMP #$80			;ea30
 BitmapDecode2	+bbrf 7, r9H, BitmDe21		;ea3c
 		LDA #r13
 		JSR RegisterJMP
-BitmDe21	LDA config			;ea45 !!!hint +smbf 0, config
-		ORA #1
-		STA config
+BitmDe21	+smbf 0, config
 		LDY #0
 		LDA (r0),y
 		PHA
-		LDA config			;!!!hint +rmbf 0, config
-		AND #%11111110
-		STA config
+		+rmbf 0, config
 		PLA
 		INC r0L
 		BNE *+4
@@ -1363,9 +1353,7 @@ PromptEnd	STX E881A			;eae2
 _InitTextPrompt_				;eaed
 		TAY
 		+MoveB mob0clr, mob1clr
-		LDA moby2			;!!!hint +rmbf 1, moby2
-		AND #%11111101
-		STA moby2
+		+rmbf 1, moby2
 		TYA
 		PHA
 		+LoadB alphaFlag, %10000011
@@ -1385,9 +1373,7 @@ IniTxPrm2	CPY #21				;eb15
 		TYA
 		LSR
 		TAY
-		LDA moby2			;!!!hint +smbf 1, moby2
-		ORA #2
-		STA moby2
+		+smbf 1, moby2
 IniTxPrm3	TYA				;eb26
 		ORA #$80
 		STA spr1pic+63
@@ -1496,9 +1482,7 @@ HLin80_1	DEY				;ec06
 		BNE HLin80_1
 HLin80_2	LDA r7L				;ec0d
 		JSR VDCSetWordCount
-		LDA r5L				;!!!hint+AddB r4L, r5L
-		+add r4L
-		STA r5L
+		+AddB r4L, r5L
 		STA r6L
 		BCC HLin80_3
 		INC r5H
@@ -1924,29 +1908,29 @@ _FrameRectangle_ 				;efb3
 
 ;!!!hint This is never called in bank0
 ;GetInlineDrwParms				;eff8
-		+PopW r5
-		+PopW returnAddress
-		LDY #1
-		LDA (returnAddress),Y
-		STA r2L
-		INY
-		LDA (returnAddress),Y
-		STA r2H
-		INY
-		LDA (returnAddress),Y
-		STA r3L
-		INY
-		LDA (returnAddress),Y
-		STA r3H
-		INY
-		LDA (returnAddress),Y
-		STA r4L
-		INY
-		LDA (returnAddress),Y
-		STA r4H
-		+PushW r5
+;		+PopW r5
+;		+PopW returnAddress
+;		LDY #1
+;		LDA (returnAddress),Y
+;		STA r2L
+;		INY
+;		LDA (returnAddress),Y
+;		STA r2H
+;		INY
+;		LDA (returnAddress),Y
+;		STA r3L
+;		INY
+;		LDA (returnAddress),Y
+;		STA r3H
+;		INY
+;		LDA (returnAddress),Y
+;		STA r4L
+;		INY
+;		LDA (returnAddress),Y
+;		STA r4H
+;		+PushW r5
 ;GtDrwPrmsEnd
-		RTS
+;		RTS
 
 BitMask1	!byte $80, $40, $20, $10, $08, $04, $02		;f02a
 BitMask2	!byte $01, $02, $04, $08, $10, $20, $40, $80	;f031
@@ -2056,8 +2040,7 @@ DrawLine2	+MoveW r12, r9			;f140
 		LDY #1
 		LDX #r10
 		JSR DShiftLeftBank0
-		+LoadB r13H, $ff		;!!!hint +LoadW r13, $ffff
-		+LoadB r13L, $ff
+		+LoadW r13, $ffff
 		+CmpB r11L, r11H
 		BCC Drw2Lin2
 		JSR CmpWR3R4
@@ -2564,8 +2547,7 @@ EF5D4		RTS				;f5d4
 
 DabsBank0					;f5d5
 		LDA zpage+1,X
-		BMI DnegateBank0		;!!!hint remove RTS here and: BPL DnegateEnd
-		RTS
+		bpl DnegateB0End
 DnegateBank0	LDA zpage+1,X			;f5da
 		EOR #$FF
 		STA zpage+1,X
@@ -2579,21 +2561,19 @@ DnegateB0End	RTS				;f5ec
 
 DShiftLeftBank0					;f5ed
 		DEY
-		BMI DShiftLeftB0End		;!!!hint BMI DnegateEnd
+		bmi DnegateB0End
 		ASL zpage,X
 		ROL zpage+1,X
 		JMP DShiftLeftBank0
-DShiftLeftB0End	RTS				;f5f7
 
 _GetScanLine_					;f5f8
 		+bbrf 7, graphMode, GSC0
 		JMP GSC80
 GSC0		TXA				;f5ff
-		PHA				;!!!hint remove this...
 		PHA
 		AND #%00000111
 		STA r6H
-		PLA				;!!!hint ...and replace this by TXA
+		txa
 		LSR
 		LSR
 		LSR
@@ -2711,26 +2691,21 @@ EF6C1		+PushB r3H			;f6c1
 		RTS
 
 _SwapMemDiskDrv_				;f6ef
-		LDA config			;!!!hint +smbf 0, config
-		ORA #1
-		STA config
+		+smbf 0, config
 		JSR SMDD_swap0p
 		JSR SMDD_doswap
 		JSR SMDD_swap0p
-		LDA config			;!!!hint +rmbf 0, config
-		AND #%11111110
-		STA config
+		+rmbf 0, config
 		RTS
 
-;!!!hint use 'X' below? will this give more speed?
-SMDD_swap0p	LDY #5				;f709
-SMDD_swap0p_0	LDA r0L,y			;f70b
-		TAX
-		LDA SMDD_swaptab,y
-		STA r0L,y
-		TXA
-		STA SMDD_swaptab,y
-		DEY
+SMDD_swap0p	ldx #5				;f709
+SMDD_swap0p_0	lda r0L,x			;f70b
+		tay
+		lda SMDD_swaptab,x
+		sta r0L,x
+		tya
+		sta SMDD_swaptab,x
+		dex
 		BPL SMDD_swap0p_0
 		RTS
 
@@ -2816,7 +2791,6 @@ AccCache5	LDA AccCacheSv0p-1,x		;f7c1
 		BNE AccCache5
 		RTS
 
-		!word 0				;f7ca ;!!!hint
 AccCacheSv0p	!word 0, 0, 0, 0		;f7cc
 
 ; everything below is copy of GetColorAddy and below to AccessCache

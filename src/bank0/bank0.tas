@@ -6,6 +6,7 @@
 !source "../../inc/geosmac.inc"
 !source "../../inc/kernal.inc"
 !source "../../inc/diskdrv.inc"
+!source "../../inc/equ.inc"
 
 !cpu 6502
 !to "bank0.bin"
