@@ -590,7 +590,7 @@ _MouseOff	+rmbf MOUSEON_BIT, mouseOn	;f5b3
 		JMP CMousMd1
 
 _MouseUp	+smbf MOUSEON_BIT, mouseOn	;f5bc
-		+smbf 1, mobenble
+		+smbf 0, mobenble
 ProcMseEnd	RTS
 
 ProcessMouse	JSR UpdateMouse 		;f5cb
