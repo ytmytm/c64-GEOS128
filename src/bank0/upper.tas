@@ -1609,15 +1609,15 @@ ILin80_6	+bra ILin80_4			;ed19
 ILin80_7	JSR SetMMUShareTop		;ed32
 		JMP HLin8
 
-ILin7		+PushW r3			;ed38
+ImprintLine	+PushW r3			;ed38
 		+PushW r4
 		+PushB dispBufferOn
 		ORA #ST_WR_FORE | ST_WR_BACK
 		STA dispBufferOn
 		JSR PrepareXCoord
-		+bbrf 7, graphMode, ILin7_1
+		+bbrf 7, graphMode, ImpLin_1
 		JMP Read80Line
-ILin7_1		LDA r5L				;ed55
+ImpLin_1	LDA r5L				;ed55
 		LDY r6L
 		STA r6L
 		STY r5L
@@ -1879,7 +1879,7 @@ RRect1		JSR _RecoverLine_		;ef97
 
 _ImprintRectangle_				;efa3
 		+MoveB r2L, r11L
-ImRec1		JSR ILin7			;efa7
+ImRec1		JSR ImprintLine			;efa7
 		LDA r11L
 		INC r11L
 		CMP r2H
