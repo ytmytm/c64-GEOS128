@@ -550,7 +550,7 @@ __InitForIO					;950e
 		SEI
 		LDA CPU_DATA
 		STA tmpCPU_DATA
-		+LoadB CPU_DATA, KRNL_IO_IN
+;;		+LoadB CPU_DATA, KRNL_IO_IN
 		LDA grirqen
 		STA tmpgrirqen
 		LDA clkreg
