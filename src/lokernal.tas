@@ -1,10 +1,7 @@
 
 		;*=$9d80
 
-RegisterJMP	JMP _RegisterJMP		;9d80 !!!hint!!!
-_MainLoop	JMP _MainLoop_2			;9d83 !!!hint!!!
-
-_RegisterJMP	STA regJMP+1			;9d86
+RegisterJMP	STA regJMP+1			;9d86
 		+MoveB mmu+6, regJMPMMU+1
 		AND #%11110000
 		STA mmu+6
@@ -139,8 +136,7 @@ _WriteFile	JSR EnterTurbo			;9ed3
 		+bnex WrFile1
 		DEC verifyFlag
 		JSR DoWriteFile
-WrFile1 	JSR DoneWithIO			;9f0b !!!hint!!!jmp DoneWithIO
-WrFile2		RTS				;9f0e
+WrFile1 	jmp DoneWithIO
 
 DoWriteFile	LDY #0				;9f0f
 		LDA (r6),y
@@ -169,6 +165,7 @@ DoWrFile1	DEY				;9e64
 		+AddVW $fe, r7
 		+bra DoWriteFile
 DoWrFile2	TAX				;9f52
+WrFile2
 DoWrFile3	RTS				;9f53
 
 SerialNumber	!word $1cd5			;9f54

@@ -1,0 +1,178 @@
+;GEOS128 joystick input driver
+;reassembled by Maciej 'YTM/Elysium' Witkowiak
+;05.08.2000
+
+		;*=$fd00
+MouseJMP	JMP _MouseInit			;fd00
+SlowMouse	JMP _SlowMouse			;fd03
+UpdateMouse	JMP _UpdateMouse		;fd06
+SetMouse	RTS				;fd09
+
+joyStat0	!byte 0				;fd0a
+joyStat1	!byte 0				;fd0b
+joyStat2	!byte 0				;fd0c
+joyStat3	!byte 0				;fd0d
+joyStat4	!byte 0				;fd0e
+joyStat5	!byte 0				;fd0f
+joyStat6	!byte 0				;fd10
+joyStat7	!byte 0				;fd11
+
+_MouseInit					;fd12
+		JSR _SlowMouse
+		STX joyStat2
+		STX mouseXPos
+		STX mouseXPos+1
+		STX mouseYPos
+		DEX
+		STX inputData
+		JMP JProc1_4
+
+_SlowMouse					;fd25
+		LDX #NULL
+		STX mouseSpeed
+SlowMse0	RTS				;fd2a
+
+_UpdateMouse					;fd2b
+		JSR JoyProc3
+		+bbrf MOUSEON_BIT, mouseOn, SlowMse0
+		JSR JoyProc1
+		LDY #$ff
+		LDA joyStat3
+		BMI UpdMse0
+		INY
+UpdMse0		STY r11H
+		STY r12L
+		ASL
+		ROL r11H
+		ASL
+		ROL r11H
+		ASL
+		ROL r11H
+		+bbrf 7, graphMode, UpdMse1
+		ASL
+		ROL r11H
+UpdMse1		+add joyStat0
+		STA joyStat0
+		LDA r11H
+		ADC mouseXPos
+		STA mouseXPos
+		LDA r12L
+		ADC mouseXPos+1
+		STA mouseXPos+1
+		LDY #0
+		LDA joyStat4
+		BPL UpdMse2
+		DEY
+UpdMse2		STY r1H
+		ASL
+		ROL r1H
+		ASL
+		ROL r1H
+		ASL
+		ROL r1H
+		+add joyStat1
+		STA joyStat1
+		LDA r1H
+		ADC mouseYPos
+		STA mouseYPos
+		RTS
+
+JoyProc1	LDA mouseAccel
+		BNE JProc1_0
+		INC mouseAccel
+JProc1_0	LDX inputData
+		BMI JProc1_2
+		+CmpB maxMouseSpeed, mouseSpeed
+		BCC JProc1_1
+		+AddB mouseAccel, joyStat2
+		BCC JProc1_4
+		INC mouseSpeed
+		+bra JProc1_4
+JProc1_1	STA mouseSpeed			;fdac
+JProc1_2	+CmpB minMouseSpeed, mouseSpeed	;fdaf
+		BCS JProc1_3
+		+SubB mouseAccel, joyStat2
+		BCS JProc1_4
+		DEC mouseSpeed
+		+bra JProc1_4
+JProc1_3	STA mouseSpeed			;fdc9
+JProc1_4	LDA #0				;fdcc
+		TAY
+		LDX inputData
+		BMI JProc1_End
+		LDY mouseSpeed
+		STY r0L
+		LDA JoyTab1,x
+		STA r1L
+		LDA JoyTab1+2,x
+		STA r2L
+		LDA JoyTab2,x
+		PHA
+		LDX #r1
+		LDY #r0
+		JSR BBMult
+		LDX #r2
+		JSR BBMult
+		PLA
+		PHA
+		BPL JProc4_1
+		LDX #r1
+		JSR Dnegate
+JProc4_1	PLA				;fdfc
+		AND #%01000000
+		BEQ JProc4_2
+		LDX #r2
+		JSR Dnegate
+JProc4_2	LDY r2H				;fe06
+		LDA r1H
+JProc1_End	STA joyStat3			;fe0a
+		STY joyStat4
+		RTS
+
+JoyProc3	LDA #$ff			;fe11
+		STA cia1base
+		LDA cia1base+1
+		EOR #$ff
+		CMP joyStat7
+		STA joyStat7
+		BNE JProc3_2
+		AND #%00001111
+		CMP joyStat6
+		BEQ JProc3_1
+		STA joyStat6
+		TAY
+		LDA JoyDirectionTab,y
+		STA inputData
+		+smbf INPUT_BIT, pressFlag
+		JSR JProc1_4
+JProc3_1	LDA joyStat7			;fe3d
+		AND #%00010000
+		CMP joyStat5
+		BEQ JProc3_2
+		STA joyStat5
+		ASL
+		ASL
+		ASL
+		EOR #%10000000
+		STA mouseData
+		+smbf MOUSE_BIT, pressFlag
+JProc3_2	RTS				;fe58
+
+JoyDirectionTab					;fe59
+		!byte $ff, $02, $06, $ff
+		!byte $04, $03, $05, $ff
+		!byte $00, $01, $07, $ff
+		!byte $ff, $ff, $ff
+
+JoyTab1						;fe68
+		!byte $ff, $b5, $00, $b5
+		!byte $ff, $b5, $00, $b5
+		!byte $ff, $b5
+
+JoyTab2						;fe72
+		!byte $00, $40, $40, $c0
+		!byte $80, $80, $00, $00
+
+;!!!junk below
+;		!byte $09, $c0, $c9, $ff, $f0, $07
+

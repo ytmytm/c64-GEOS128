@@ -1,0 +1,87 @@
+
+		;*=$ff00
+;ff00 - 5 MMU bytes
+;		!byte $7f, $00, $00, $00, $00
+
+IRQHandler					;ff05
+		CLD
+		PHA
+		+PushB config
+		+LoadB config, CIOIN
+		+PushB mmu+6
+		AND #%11110000
+		STA mmu+6
+		JSR _IRQHandlerMain
+		+PopB mmu+6
+		+PopB config
+		PLA
+EndInterrupt	RTI				;ff25
+
+DBDefIconsTab					;ff26
+		!word DBIcPicOK			;->d450
+		!word 0
+		!byte 6, 16
+		!word DBIcOK
+
+		!word DBIcPicCANCEL		;->d3fe
+		!word 0
+		!byte 6, 16
+		!word DBIcCANCEL
+
+		!word DBIcPicYES		;->d309
+		!word 0
+		!byte 6, 16
+		!word DBIcYES
+
+		!word DBIcPicNO			;->d2be
+		!word 0
+		!byte 6, 16
+		!word DBIcNO
+
+		!word DBIcPicOPEN		;->d35a
+		!word 0
+		!byte 6, 16
+		!word DBIcOPEN
+
+		!word DBIcPicDISK		;->d3ad
+		!word 0
+		!byte 6, 16
+		!word DBIcDISK
+
+_EnterDT_DB					;ff56
+		!byte DEF_DB_POS | 1
+		!byte DBTXTSTR, TXT_LN_X, TXT_LN_1_Y+6
+		!word _EnterDT_Str0
+		!byte DBTXTSTR, TXT_LN_X, TXT_LN_2_Y+6
+		!word _EnterDT_Str1
+		!byte OK, DBI_X_2, DBI_Y_2
+		!byte NULL
+
+_SetPattern
+		ASL				;ff65
+		ASL
+		ASL
+		ADC #<PatternTab
+		STA curPattern
+		LDA #0
+		ADC #>PatternTab
+		STA curPattern+1
+		RTS
+
+;ff73 !!!junk?
+;		!byte $26, $c3, $c8, $01, $11, $48, $00, $bc
+;		!byte $b9, $03, $04, $70, $08, $08
+
+;ff81 !!!kernal jumptable
+;		!for Count, 38 {
+;		JSR ExecCBMKernal
+;		}
+;		RTS				;fff3
+;fff4 !!!junk?
+;		!byte $ea
+;sysFlgSave	!text "CBM"			;fff5, sysFlgSave is the first byte
+;
+;		!word $03e4			;fff8
+;		!word EndInterrupt		;fffa
+;		!word EndInterrupt		;fffc
+;		!word IRQHandler		;fffe

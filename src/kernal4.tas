@@ -10,9 +10,9 @@ DBDoTXTSTR	CLC				;effc
 		LDA (DBoxDesc),y
 		STA r0H
 		INY
-		TYA
+DBDoSTR		TYA
 		PHA
-		JSR PutString
+		JSR _PutString
 		+PopB r1L
 		RTS
 
@@ -26,11 +26,7 @@ DBDoVARSTR	CLC				;f016
 		STA r0L
 		LDA zpage+1,x
 		STA r0H
-		TYA
-		PHA
-		JSR PutString
-		+PopB r1L
-		RTS
+		jmp DBDoSTR
 
 DBDoGETSTR	CLC				;f032
 		JSR CalcDialogCoords
@@ -52,12 +48,12 @@ DBDoGETSTR	CLC				;f032
 		+LoadB r1L, 0
 		TYA
 		PHA
-		JSR GetString
+		JSR _GetString
 		+PopB r1L
 		RTS
 
 DBKeyVector2	+LoadB sysDBData, DBGETSTRING	;f061
-		JMP RstrFrmDialogue
+		JMP _RstrFrmDialogue
 
 DBTextCoords	LDY r1L 			;f069
 		LDA (DBoxDesc),y
@@ -98,18 +94,18 @@ DBDoGETFILES	LDY r1L 			;f082
 		+PushB r7L
 		+PushW r10
 		LDA #$ff
-		JSR FrameRectangle
+		JSR _FrameRectangle
 		SEC
 		LDA r2H
 		SBC #16
 		STA r11L
 		LDA #$ff
-		JSR HorizontalLine
+		JSR _HorizontalLine
 		+PopW r10
 		+PopB r7L
 		+LoadB r7H, 15
 		+LoadW r6, fileTrScTab
-		JSR FindFTypes
+		JSR _FindFTypes
 		+PopB r2L
 		+PopB r3L
 		STA DBGFArrowX
@@ -153,6 +149,7 @@ DBGFlsHlp_13	+PopB DBGFileSelected		;f138
 		BPL DBGFlsHlp_14
 		LDA #0
 DBGFlsHlp_14	STA DBGFTableIndex		;f143
+DBGFPrVec2
 DBGFlsHlp_15	RTS
 
 DBGFilesArrowsIcons				;f147
@@ -180,7 +177,7 @@ DBGFPressVector LDA mouseData			;f14f
 		+LoadB r1L, 14
 		LDX #r0
 		LDY #r1
-		JSR Ddiv
+		JSR _Ddiv
 		LDA r0L
 		+add DBGFTableIndex
 		CMP DBGFilesFound
@@ -190,8 +187,7 @@ DBGFPressVector LDA mouseData			;f14f
 		TXA
 DBGFPrVec1	STA DBGFileSelected		;f191
 		JSR DBGFilesHelp6
-		JSR DBGFilesHelp2		;!!!hint!!!jmp DBGFilesHelp2
-DBGFPrVec2	RTS				;f19a
+		jmp DBGFilesHelp2
 
 DBGFDoArrow	JSR DBGFilesHelp6		;f19b
 		+LoadB r0H, 0
@@ -200,7 +196,7 @@ DBGFDoArrow	JSR DBGFilesHelp6		;f19b
 		ASL
 		ASL
 		ROL r0H
-		+addv 12			;!!!macro!!!
+		+addv 12
 		STA r0L
 		BCC *+4
 		INC r0H
@@ -208,7 +204,7 @@ DBGFDoArrow	JSR DBGFilesHelp6		;f19b
 		ORA E8871
 		STA r0H
 		LDX #r0
-		JSR NormalizeX
+		JSR _NormalizeX
 		LDX DBGFTableIndex
 		+CmpW r0, mouseXPos
 		BCC DBDoArrow1
@@ -233,7 +229,7 @@ DBDoArrow5	JSR DBGFilesHelp2		;f1f6
 DBGFilesHelp2	LDA DBGFileSelected		;f1fc
 		JSR DBGFilesHelp3
 		LDY #r1
-		JMP CopyString
+		JMP _CopyString
 
 DBGFilesHelp3	LDX #r0 			;f207
 		JSR DBGFilesHelp4
@@ -246,7 +242,7 @@ DBGFilesHelp4	STA r0L 			;f217
 		PHA
 		LDY #r0
 		LDX #r1
-		JSR BBMult
+		JSR _BBMult
 		PLA
 		TAX
 		LDA r1L
@@ -262,20 +258,20 @@ DBGFilesHelp5	+PushW rightMargin		;f236
 		JSR DBGFilesHelp8
 		+MoveW r4, rightMargin
 		+LoadB r15L, 0
-		JSR SetPattern
+		JSR _SetPattern
 		LDA DBGFTableIndex
 		LDX #r14
 		JSR DBGFilesHelp4
 		+LoadB currentMode, SET_BOLD
 DBGFlsHlp_51	LDA r15L			;f25c
 		JSR DBGFilesHelp8
-		JSR Rectangle
+		JSR _Rectangle
 		+MoveW r3, r11
 		LDA r2L
 		+addv 9
 		STA r1H
 		+MoveW r14, r0
-		JSR PutString
+		JSR _PutString
 		+AddVW 17, r14
 		INC r15L
 		+CmpBI r15L, 5
@@ -288,7 +284,7 @@ DBGFlsHlp_51	LDA r15L			;f25c
 DBGFilesHelp6	LDA DBGFileSelected		;f29f
 		+sub DBGFTableIndex
 		JSR DBGFilesHelp8
-		JMP InvertRectangle
+		JMP _InvertRectangle
 
 DBGFilesHelp7	CLC				;f2ac
 		JSR CalcDialogCoords
@@ -309,7 +305,7 @@ DBGFilesHelp8	STA r0L 			;f2d4
 		+LoadB r1L, 14
 		LDY #r1
 		LDX #r0
-		JSR BBMult
+		JSR _BBMult
 		JSR DBGFilesHelp7
 		+AddB r0L, r2L
 		CLC
@@ -321,8 +317,7 @@ DBGFilesHelp8	STA r0L 			;f2d4
 		BNE *+4
 		INC r3H
 		LDX #r4
-		JSR Ddec			;!!!hint!!!jmp Ddec
-		RTS
+		jmp _Ddec
 
 _EnterDeskTop					;f300
 		SEI
@@ -352,16 +347,16 @@ EDT2		;+LoadW r0, _EnterDT_DB		;f330
 		STA r0H
 		LDA #<_EnterDT_DB
 		STA r0L
-		JSR DoDlgBox
+		JSR _DoDlgBox
 		LDA TempCurDrive
 		BNE EDT1
-EDT3		JSR SetDevice			;f340
+EDT3		JSR _SetDevice			;f340
 		JSR OpenDisk
 		+beqx EDT5
 EDT4		RTS				;f349
 EDT5		STA r0L 			;f34a
 		+LoadW r6, DeskTopName
-		JSR GetFile
+		JSR _GetFile
 		+bnex EDT4
 		LDA fileHeader+O_GHFNAME+13
 		CMP #"2"
@@ -371,7 +366,7 @@ EDT5		STA r0L 			;f34a
 		CMP #"0"
 		BCC EDT4
 EDT6		LDA TempCurDrive		;f36a
-		JSR SetDevice
+		JSR _SetDevice
 		+LoadB r0L, NULL
 		+MoveW fileHeader+O_GHST_VEC, r7
 
@@ -385,9 +380,7 @@ _StartAppl	SEI				;f37e
 		JSR UNK_4
 		LDX r7H
 		LDA r7L
-		JSR CallRoutine			;!!!hint!!! JMP _MNLP?
-		CLI
-		JMP MainLoop
+		jmp _MNLP
 
 InitGEOS	JSR _DoFirstInitIO		;f39a
 InitGEOEnv	JSR InitGEORam			;f39d
@@ -398,7 +391,7 @@ InitGEORam	+LoadW r0, InitRamTab		;f3a3
 		JMP SetRightMargin
 
 _DoFirstInitIO					;f3b1
-		+LoadB CPU_DDR, $2f		;!!!hint!!!
+		+LoadB CPU_DDR, $2f
 		+LoadB config, CIOIN
 		LDX #7
 		LDA #true
@@ -431,15 +424,14 @@ DFIIO1		+PopB mmu+6			;f3ef
 		+LoadB cia2base+2, $3f
 		+LoadB cia1base+13, $7f
 		STA cia2base+13
-		LDA cia1base+13			;!!!hint!!!
 		LDA cia2base+13
 		+LoadW r0, VIC_IniTbl
 		LDY #30
 		JSR SetVICRegs
 		JSR SetVDCRegs
 		LDA #0
-		JSR SetColorMode
-		JSR EFF8A			;->ff8a
+		JSR _SetColorMode
+		JSR CBM_RestoreVectors
 		JMP ResetMseRegion
 
 _FirstInit					;f431
@@ -454,7 +446,7 @@ _FirstInit					;f431
 		+LoadB maxMouseSpeed, iniMaxMouseSpeed
 		+LoadB minMouseSpeed, iniMinMouseSpeed
 		+LoadB mouseAccel, iniMouseAccel
-		JSR i_FillRam
+		JSR _i_FillRam
  		!word 1000
 		!word COLOR_MATRIX
 FItempColor	!byte (DKGREY << 4)+LTGREY	;f468
@@ -551,11 +543,7 @@ U_40		+LoadW r2, dataDiskName 	;f51b
 U_41		RTS
 
 UNK_5						;f52c
-		LDA EE7AF			;!!!hint!!!-copyprot
-		BNE U_51
-		JSR GSN_hb
-		STA EE7AF
-U_51	+MoveB r10L, E8870			;f537
+	+MoveB r10L, E8870
 	+MoveB r0L, E8872
 		AND #%11000000
 		BEQ U_52
@@ -563,12 +551,12 @@ U_51	+MoveB r10L, E8870			;f537
 		LDX #r2
 		LDY #r4
 		LDA #16
-		JSR CopyFString
+		JSR _CopyFString
 		+LoadW r4, dataFileName
 		LDX #r3
 		LDY #r4
 		LDA #16
-		JSR CopyFString
+		JSR _CopyFString
 U_52		+MoveW r7, E8873		;f567
 		RTS
 
@@ -578,10 +566,10 @@ _StartMouseMode 				;f572
 		ORA r11H
 		BEQ SMousMd1
 		LDX #r11
-		JSR NormalizeX
+		JSR _NormalizeX
 		+MoveW r11, mouseXPos
 		STY mouseYPos
-		JSR SlowMouse_64
+		JSR SlowMouse
 SMousMd1	LDA #>CheckClickPos		;f58c
 		STA mouseVector+1
 		LDA #<CheckClickPos
@@ -591,7 +579,7 @@ SMousMd1	LDA #>CheckClickPos		;f58c
 		LDA #<DoMouseFault
 		STA mouseFaultVec
 		+LoadB faultData, NULL
-		JMP MouseUp
+		JMP _MouseUp
 
 _ClearMouseMode 				;f5a8
 		+LoadB mouseOn, NULL
@@ -602,22 +590,19 @@ _MouseOff	+rmbf MOUSEON_BIT, mouseOn	;f5b3
 		JMP CMousMd1
 
 _MouseUp	+smbf MOUSEON_BIT, mouseOn	;f5bc
-		LDA $d015			;!!!hint!!! macro+const
-		ORA #1
-		STA $d015
-		RTS
+		+smbf 1, mobenble
+ProcMseEnd	RTS
 
-ProcessMouse	JSR UpdateMouse_64 		;f5cb
+ProcessMouse	JSR UpdateMouse 		;f5cb
 		+bbrf MOUSEON_BIT, mouseOn, ProcMseEnd
 		JSR CheckMsePos
 		+LoadB r3L, 0
 		+bbsf 7, graphMode, ProcMse1
 		+MoveW msePicPtr, r4
-		JSR DrawSprite
+		JSR _DrawSprite
 ProcMse1	+MoveW mouseXPos, r4		;f5e8
 		+MoveB mouseYPos, r5L
-		JSR PosSprite			;!!!hint!!!jmp PosSprite
-ProcMseEnd	RTS				;f5f7
+		jmp _PosSprite
 
 CheckMsePos	LDY mouseLeft			;f5f8
 		LDX mouseLeft+1
@@ -665,6 +650,7 @@ ChMsePs9	+CmpW mouseXPos, menuLeft	;f66e
 		BCC ChMsePs11
 		BEQ ChMsePs11
 ChMsePs10	+smbf OFFMENU_BIT, faultData	;f68c
+DoMseFltEnd
 ChMsePs11	RTS				;f694
 
 CheckClickPos	LDA mouseData			;f695
@@ -690,11 +676,9 @@ ChClkPos3	+bbrf ICONSON_BIT, mouseOn, ChClkPos4	;f6d5
 		JMP ProcessClick
 ChClkPos4	LDA otherPressVec		;f6de
 		LDX otherPressVec+1
-		JMP CallRoutine
+		JMP _CallRoutine
 
-EF6E7		RTS				;!!!hint!!!
-
-DoMouseFault	LDA #$C0			;f6e8 !!!hint!!!what's that?
+DoMouseFault	;LDA #$C0			;f6e8 !!!hint!!!what's that?
 		+bbrf MOUSEON_BIT, mouseOn, DoMseFltEnd
 		BVC DoMseFltEnd
 		LDA menuNumber
@@ -710,8 +694,7 @@ DoMseFlt1	TXA				;f708
 		BNE DoMseFlt2
 		TYA
 		+bbsf 6, menuOptNumber, DoMseFltEnd
-DoMseFlt2	JSR _DoPreviousMenu		;f714 !!!hint!!!jmp _DoPreviousMenu
-DoMseFltEnd	RTS				;f717
+DoMseFlt2	jmp _DoPreviousMenu
 
 _DoMenu 					;f718
 		STA menuOptionTab
@@ -822,7 +805,7 @@ Menu_0		PHA				;f808
 		ADC r8L
 		ADC #7
 		TAY
-	 	RTS
+GetMnuDscEnd	RTS
 
 GetMenuDesc	LDX menuNumber			;f821
 		LDA menuStackL,x
@@ -838,14 +821,10 @@ GetMnuDsc1	LDA (r0),y			;f836
 		STA menuTop,y
 		DEY
 		BPL GetMnuDsc1
-		LDA EC098,Y			;!!!hint!!! copyprot
-		+addv $48
-		STA EC038,Y
 		+MoveW menuLeft, r11
 		+MoveB menuTop, r1H
-		+bbsf 6, menuOptNumber, GetMnuDsc2
-		JSR ResetMseRegion		;!!!hint!!! jmp ResetMseRegion
-GetMnuDsc2	RTS				;f861
+		+bbsf 6, menuOptNumber, GetMnuDscEnd
+		jmp ResetMseRegion
 
 Menu_1		JSR MenuStoreFont		;f862
 		JSR _UseSystemFont
@@ -887,11 +866,9 @@ Menu_2		+PushW r10			;f8b0
 		+PushW leftMargin
 		+PushW rightMargin
 		+PushW StringFaultVec
-		+LoadB leftMargin+1, 0		;!!!hint!!!+LoadW leftMargin, 0
-		+LoadB leftMargin, 0
-		SEC
+		+LoadW leftMargin, 0
 		LDA menuRight
-		SBC #1
+		+subv 1
 		STA rightMargin
 		LDA menuRight+1
 		SBC #0
@@ -935,7 +912,7 @@ _RecoverAllMenus				;f95f
 		JSR _RecoverMenu
 		DEC menuNumber
 		BPL _RecoverAllMenus
-		+LoadB menuNumber, NULL		;!!!hint!!!INC menuNumber
+		inc menuNumber
 		RTS
 
 _RecoverMenu					;f970
@@ -944,8 +921,8 @@ RcvrMnu0	LDA RecoverVector		;f973
 		ORA RecoverVector+1
 		BNE RcvrMnu1
 		LDA #0
-		JSR SetPattern
-		JMP Rectangle
+		JSR _SetPattern
+		JMP _Rectangle
 RcvrMnu1	JMP (RecoverVector)		;f983
 
 DrawMenu	LDA menuOptNumber		;f986
@@ -976,7 +953,7 @@ DrawMenu2	+MoveW menuLeft, r3		;f9bd
 		INC r3H
 		+MoveW menuRight, r4
 		LDX #r4
-		JSR Ddec
+		JSR _Ddec
 DrawMenu3	LDX r2L 			;f9dc
 		LDA menuLimitTabL,x
 		STA r11L
@@ -1013,7 +990,7 @@ Menu_5		JSR _MouseOff			;f9f8
 		JSR Menu_7
 		JSR MenuDoInvert
 		JSR Menu_7
-		LDX menuNumber
+Menu_6		LDX menuNumber
 		LDA menuOptionTab,x
 		PHA
 	JSR Menu_8
@@ -1027,13 +1004,6 @@ Menu_51 JSR Menu_6				;fa47
 		RTS
 Menu_52 	INC menuNumber			;fa51
 		JMP DoMenu0
-
-Menu_6		LDX menuNumber			;fa65	;!!!hint!!! same as above (end of Menu_5)
-		LDA menuOptionTab,x
-		PHA
-	JSR Menu_8
-		PLA
-		JMP (r0)
 
 Menu_7		LDA menuOptNumber		;fa65
 		AND #%00011111
@@ -1091,8 +1061,7 @@ Menu_76 	+MoveW menuLeft, r3		;facc
 		INC r3H
 		+MoveW menuRight, r4
 		LDX #r4
-		JSR Ddec			;!!!hint!!!jmp Ddec
-		RTS
+		jmp _Ddec
 
 Menu_8	JSR Menu_0				;faec
 		INY
@@ -1131,10 +1100,8 @@ MnuDRstrFnt1	LDA saveFontTab-1,x		;fb1c
 _DoIcons	+MoveW r0, IconDescVec		;fb25
 	JSR Icons_1
 		JSR ResetMseRegion
-		LDA mouseOn			;!!!macro!!!
-		AND #SET_MSE_ON
-		BNE DoIcons1
-		LDA mouseOn			;!!!macro!!!
+		+bbsf MOUSEON_BIT, mouseOn, DoIcons1
+		LDA mouseOn			;!!!macro???
 		AND #%10111111
 		STA mouseOn
 DoIcons1	LDA mouseOn			;fb3f
@@ -1160,10 +1127,8 @@ ResetMseRegion	LDA #NULL			;fb58
 		+bbsf 7, graphMode, RMseReg_1
 		+LoadW mouseRight, SC_PIX_WIDTH-1
 		+bbrf 7, graphMode, RMseRegEnd
-		+LoadW mouseRight, SCREENPIXELWIDTH-1
+RMseReg_1	+LoadW mouseRight, SCREENPIXELWIDTH-1
 RMseRegEnd	RTS				;fb84
-RMseReg_1	+LoadW mouseRight, SCREENPIXELWIDTH-1	;!!!hint!!!
-		RTS
 
 CalcIconDescTab ASL				;fb90
 		ASL
@@ -1192,15 +1157,15 @@ Icons_12	INC r10L			;fbb6
 		LDY #0
 		CMP (IconDescVec),y
 		BNE Icons_10
-		RTS
+ProcClkEnd	RTS
 
 ProcessClick	JSR FindClkIcon
 		BCS ProcClk2
 		LDA otherPressVec
 		LDX otherPressVec+1
-		JMP CallRoutine
+		JMP _CallRoutine
 ProcClk2	LDA clkBoxTemp			;fbcf
-		BNE ProcClk7
+		BNE ProcClkEnd
 		LDA r0L
 		STA clkBoxTemp2
 		STY clkBoxTemp
@@ -1236,8 +1201,7 @@ ProcClk6	STY dblClickCount		;fc14
 		TAX
 		DEY
 		LDA (IconDescVec),y
-		JSR CallRoutine			;!!!hint!!!jmp CallRoutine
-ProcClk7	RTS				;fc31
+		jmp _CallRoutine
 
 FindClkIcon	+LoadB r0L, NULL		;fc32
 FndClkIcn1	LDA r0L 			;fc36
@@ -1315,13 +1279,12 @@ CalcIconCoords	LDA (IconDescVec),y		;fc8e
 		STA r4H
 		LDY #3
 		LDX #r3
-		JSR DShiftLeft
+		JSR _DShiftLeft
  		LDY #3
 		LDX #r4
-		JSR DShiftLeft
+		JSR _DShiftLeft
 		LDX #r4
-		JSR Ddec			;!!!hint!!!jmp Ddec
-		RTS
+		jmp _Ddec
 
 ;!!!hint!!! name it somehow...
 EFCCC		PHA				;fccc
@@ -1337,17 +1300,17 @@ EFCDC		PLA				;fcdc
 		RTS
 
 ;!!!hint!!! junk...
-		RTS
-		PLA
-		RTS
-		!byte $04, $29, $7F, $D0, $01, $0A, $60, $68
-		!byte $60, $20, $75, $C1, $60, $48, $29, $80
-		!byte $10, $0B, $68, $24, $3F, $30, $04, $29
-		!byte $7F, $D0, $01
-		ASL
-		RTS
-		PLA
-		RTS
+;		RTS
+;		PLA
+;		RTS
+;		!byte $04, $29, $7F, $D0, $01, $0A, $60, $68
+;		!byte $60, $20, $75, $C1, $60, $48, $29, $80
+;		!byte $10, $0B, $68, $24, $3F, $30, $04, $29
+;		!byte $7F, $D0, $01
+;		ASL
+;		RTS
+;		PLA
+;		RTS
 
 ;joystick driver below
 ; fd00

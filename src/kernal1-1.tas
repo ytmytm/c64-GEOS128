@@ -2,7 +2,7 @@
 ;
 ; GEOS Kernal 128 v2.0
 ; reassembled by Maciej 'YTM/Elysium' Witkowiak
-; 31.7, 1-4,9.8 2000
+; 31.7, 1-4,9-10.8 2000
 ;
 
 ;--
@@ -28,10 +28,12 @@ iniMaxMouseSpeed= $7f
 iniMinMouseSpeed= $1e
 iniMouseAccel	= $7f
 SelectFlashDelay= 10
+SerialNumberValue = $1cd5
 ;--
 ; kernal.inc
 PALNTSCFLAG	= $0a03
 BASICspace	= $1c00
+sysFlgSave	= $fff5
 KbdDMltTab	= $87f6
 PrvCharWidth	= $880d
 clkBoxTemp	= $8819
@@ -74,12 +76,8 @@ fileHeadMemBuff	= $d8c0
 prntDrvMemBuff	= $d9c0		;$0640 len -> $e000
 ;--
 EFF3D=$ff3d			; this is in ROM
-EFF8A=$ff8a			; this is through ExecCBMKernal
+CBM_RestoreVectors=$ff8a	; this is through ExecCBMKernal
 ;--
-;copy prot...
-EC218=$c218
-EC098=$c098
-EC038=$c038
 
 		;*=$c000
 
@@ -172,7 +170,7 @@ TB4		LDA ToBASICTab,Y		;c0c6
 		STA r0,Y
 		DEY
 		BPL TB4
-		JSR StashRAM
+		JSR _StashRAM
 TB5		PLA				;c0d2
 		JMP EE066
 		
@@ -182,20 +180,18 @@ ToBASICTab      				;c0d6
 		!word OS_VARS_LGH
 		!byte $00
 
-_MainLoop_2					;c0dd
- 		JSR _DoCheckButtons
+_MainLoop					;c0dd
+		JSR _DoCheckButtons
 		JSR _ExecuteProcesses
 		JSR _DoCheckDelays
 		JSR _DoUpdateTime
 		LDA appMain+0
 		LDX appMain+1
-_MNLP		JSR CallRoutine			;c0ef
+_MNLP		JSR _CallRoutine		;c0ef
 		LDA grcntrl1
 		AND #%01111111
 		STA grcntrl1
 		CLI
 		JMP _MainLoop
-		DEY				;!!!hint!!!
-		DEY
 
 ;jump table					;c100

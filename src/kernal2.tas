@@ -19,9 +19,9 @@ __IsMseInRegion__				;d027
 		TXA
 		PHA
 		LDX #r3
-		JSR NormalizeX
+		JSR _NormalizeX
 		LDX #r4
-		JSR NormalizeX
+		JSR _NormalizeX
 		PLA
 		TAX
 		LDA mouseYPos
@@ -117,7 +117,7 @@ CRC4		LSR r3L 			;d0e5
 		BNE CRC5
 		INC r0H
 CRC5		LDX #r1 			;d0ee
-		JSR Ddec
+		JSR _Ddec
 		LDA r1L
 		ORA r1H
 		BNE CRC1
@@ -227,9 +227,8 @@ __DSdiv__					;d1b8
 		LDX r8L
 		JSR __Ddiv__
 		PLP
-		BPL DSDivl1
-		JSR _Dnegate
-DSDivl1		RTS				;d1d3	;!!!hint!!!
+		BPL Ddivl2
+		jmp _Dnegate
 
 __ProcessDelays__				;d1d4
 		LDX DelaySP
@@ -268,7 +267,7 @@ __GetInlineDrwParms__				;d1ee
 		LDA (returnAddress),Y
 		STA r4H
 		+PushW r5
-		+PushW r6			;!!!hint!!!
+		+PushW r6			;!!!hint??? (maybe it's to restore r6?)
 		RTS
 
 __GrStSetCoords__				;d22c

@@ -62,17 +62,17 @@ CFVF_3		LDX #0
 
 _DoCheckButtons					;c367
 		+bbrf 7, E881A, DoChkBtns01
-		JSR TempHideMouse
+		JSR _TempHideMouse
 		+LoadB r3L, 1
 		+MoveW stringX, r4
 		+MoveB stringY, r5L
-		JSR PosSprite
-		JSR EnablSprite
+		JSR _PosSprite
+		JSR _EnablSprite
 		CLV
 DoChkBtns01	BVC DoChkBtns02			;c389
-		JSR TempHideMouse
+		JSR _TempHideMouse
 		+LoadB r3L, 1
-		JSR DisablSprite
+		JSR _DisablSprite
 DoChkBtns02	+LoadB E881A, 0			;c395
 		+bbrf 7, graphMode, DoChkBtns03
 		JSR EE045
@@ -80,25 +80,24 @@ DoChkBtns03	+bbrf INPUT_BIT, pressFlag, DoChkBtns1
 		+rmbf INPUT_BIT, pressFlag
 		LDA inputVector
 		LDX inputVector+1
-		JSR CallRoutine
+		JSR _CallRoutine
 DoChkBtns1	+bbrf MOUSE_BIT, pressFlag, DoChkBtns2	;c3a1
 		+rmbf MOUSE_BIT, pressFlag
 		LDA mouseVector
 		LDX mouseVector+1
-		JSR CallRoutine
+		JSR _CallRoutine
 DoChkBtns2	+bbrf KEYPRESS_BIT, pressFlag, DoChkBtns3	;c3b4
 		JSR KbdScanHelp3
 		LDA keyVector
 		LDX keyVector+1
-		JSR CallRoutine
+		JSR _CallRoutine
 DoChkBtns3	LDA faultData			;c3d9
 		BEQ DoChkBtns4
 		LDA mouseFaultVec
 		LDX mouseFaultVec+1
-		JSR CallRoutine
+		JSR _CallRoutine
 		LDA #NULL
 		STA faultData
-DoESC_RULER					;!!!hint - move it to conio stuff!!!
 DoChkBtns4	RTS				;c3ec
 
 _IRQHandlerMain					;c3ed
@@ -135,16 +134,16 @@ IRQHand3	JSR ProcessMouse		;c436
 		BEQ IRQHand4
 		DEC KbdQueFlag
 IRQHand4	JSR _DoKeyboardScan
-		JSR SetMouse_64
+		JSR SetMouse
  		LDA alarmWarnFlag
 		BEQ IRQHand5
 		DEC alarmWarnFlag
 IRQHand5	LDA intTopVector		;c452
 		LDX intTopVector+1
-		JSR CallRoutine
+		JSR _CallRoutine
 		LDA intBotVector
 		LDX intBotVector+1
-		JSR CallRoutine
+		JSR _CallRoutine
 		+LoadB grirq, 1
 		LDX #31
 IRQHand6	PLA				;c46b
@@ -205,8 +204,8 @@ DoKbdScan5	+PopB clkreg			;c4fc
 		RTS
 		
 KbdScanRow	+LoadB cia1base+0, $ff		;c501
-		+LoadB keyreg, $ff		;!!!hint!!!
-		+CmpBI cia1base+1, $ff
+		STA keyreg
+		+CmpBI cia1base+1, $ff		;!!!hint???
 		RTS
 
 KbdScanHelp1	STA r0L 			;c511
@@ -438,28 +437,28 @@ _i_BitmapUp					;c769
 		JSR _BitmapUp
 		PHP
 		LDA #7
-		JMP DoInlineReturn
+		JMP _DoInlineReturn
 
 _i_Rectangle					;c797
 		JSR GetInlineDrwParms
 		JSR _Rectangle
 		PHP
 		LDA #7
-		JMP DoInlineReturn
+		JMP _DoInlineReturn
 
 _i_RecoverRectangle				;c7a3
 		JSR GetInlineDrwParms
 		JSR _RecoverRectangle
 		PHP
 		LDA #7
-		JMP DoInlineReturn
+		JMP _DoInlineReturn
 
 _i_ImprintRectangle				;c7af
 		JSR GetInlineDrwParms
 		JSR _ImprintRectangle
 		PHP
 		LDA #7
-		JMP DoInlineReturn
+		JMP _DoInlineReturn
 
 _i_FrameRectangle				;c7bb
 		JSR GetInlineDrwParms
@@ -468,7 +467,7 @@ _i_FrameRectangle				;c7bb
 		JSR _FrameRectangle
 		PHP
 		LDA #8
-		JMP DoInlineReturn
+		JMP _DoInlineReturn
 
 _i_GraphicsString				;c7ca
 		+PopB r0L
@@ -487,7 +486,7 @@ SetNewMode0	LDA grcntrl1			;c7e0
 		AND #%01101111
 		STA grcntrl1
 		LDA vdcClrMode
-		JMP SetColorMode
+		JMP _SetColorMode
 SNMode_1	ORA #%00010000			;c7f2
 		AND #%01111111
 		STA grcntrl1
@@ -509,7 +508,7 @@ SetRightMargin	LDA #0				;c806
 SRMargin_1	STA clkreg			;c81b
 		STX rightMargin+1
 		STY rightMargin
-		JMP UseSystemFont
+		JMP _UseSystemFont
 
 _GraphicsString 				;c825
 		JSR Getr0AndInc
@@ -518,7 +517,7 @@ _GraphicsString 				;c825
 		DEY
 		LDA GStrTL,Y
 		LDX GStrTH,Y
-		JSR CallRoutine
+		JSR _CallRoutine
 		+bra _GraphicsString
 GStringEnd	RTS				;c838
 
@@ -679,8 +678,8 @@ ClrScr3		DEX				;c964
 		RTS
 
 ClrScr80	LDA #2				;c968
-		JSR SetPattern
-		JSR i_Rectangle
+		JSR _SetPattern
+		JSR _i_Rectangle
 		!byte 0, 199
 		!word 0, 639
 		RTS
@@ -690,7 +689,7 @@ _i_FillRam					;c977
 		JSR _FillRam
 		PHP
 		LDA #6
-		JMP DoInlineReturn
+		JMP _DoInlineReturn
 
 						;c989
 BitMask2	!byte $01, $02, $04, $08, $10, $20, $40, $80
@@ -720,24 +719,21 @@ DeskTopName	!text "128 DESKTOP", NULL	;ca01
 
 _DShiftLeft					;ca0d
 		DEY
-		BMI DShLf0
+		BMI DnegateEnd
 		ASL zpage,X
 		ROL zpage+1,X
 		JMP _DShiftLeft
-DShLf0		RTS				;ca17
 
 _DShiftRight					;ca18
 		DEY
-		BMI DShRg0
+		BMI DnegateEnd
 		LSR zpage+1,X
 		ROR zpage,X
 		JMP _DShiftRight
-DShRg0		RTS				;ca22
 
 _Dabs						;ca23
 		LDA zpage+1,X
-		BMI _Dnegate
-		RTS
+		BPL DnegateEnd
 _Dnegate	LDA zpage+1,X			;ca28
 		EOR #$FF
 		STA zpage+1,X
@@ -745,9 +741,9 @@ _Dnegate	LDA zpage+1,X			;ca28
 		EOR #$FF
 		STA zpage,X
 		INC zpage,X
-		BNE Dnegate1
+		BNE DnegateEnd
 		INC zpage+1,X
-Dnegate1	RTS				;ca3a
+DnegateEnd	RTS				;ca3a
 
 _Ddec						;ca3b
 		LDA zpage,X
@@ -758,7 +754,6 @@ Ddecl0		DEC zpage,X			;ca41
 		ORA zpage+1,X
 		RTS
 
-;!!!strange calls under I/O space with offset in A (change to labels)!!!
 _IsMseInRegion	LDA #0				;ca48
 		!byte $2c
 __MoveData	LDA #3				;ca4b
@@ -837,7 +832,7 @@ _i_MoveData					;cabf
 		JSR _MoveData
 		PHP
 		LDA #7
-		JMP DoInlineReturn
+		JMP _DoInlineReturn
 
 GetMDataDatas					;cad6
 		LDY #1
@@ -877,10 +872,10 @@ MData_0		+CmpBI r0H, $02			;cb13
 		PHA
 		+LoadB r1H, 0
 		STA r3L
-		JSR StashRAM
+		JSR _StashRAM
 		+PopB r0H
 		+MoveB r1L, r0L
-		JSR FetchRAM
+		JSR _FetchRAM
 		+bra MData_2
 MData_1		JSR __MoveData			;cb36
 MData_2		+PopB r3L			;cb39
@@ -922,9 +917,9 @@ _Panic						;cb6d
 		PLA
 		+PopW r0
 		LDX #r0
-		JSR Ddec
+		JSR _Ddec
 		LDX #r0
-		JSR Ddec
+		JSR _Ddec
 		LDA r0H
 		LDX #0
 		JSR Panil0
@@ -935,7 +930,7 @@ _Panic						;cb6d
 		STA r0H
 		LDA #<_PanicDB_DT
 		STA r0L
-		JSR DoDlgBox
+		JSR _DoDlgBox
 Panil0		PHA				;cb9c
 		LSR
 		LSR
@@ -969,8 +964,7 @@ _PanicDB_DT					;cbd6
 		!byte NULL
 
 _GetSerialNumber				;cbdd
-		+MoveB SerialNumber, r0L	;!!!hint+MoveW SerialNumber, r0
-GSN_hb		+MoveB SerialNumber+1, r0H	;cbe2
+		+MoveW SerialNumberValue, r0
 		rts
 
 _DrawSprite					;cbe8
@@ -995,7 +989,7 @@ SprTabH 	!byte >spr0pic, >spr1pic, >spr2pic, >spr3pic
 
 _PosSprite					;cc0e
 		LDX #r4
-		JSR NormalizeX
+		JSR _NormalizeX
 		LDA r3L
 		ASL
 		TAY
@@ -1036,8 +1030,6 @@ PSpr1		STY msbxpos			;cc5b
 _EnablSprite					;cc5f
 		LDX r3L
 		LDA BitMask2,X
-		TAX				;!!!hint!!!
-		TXA
 		ORA mobenble
 		STA mobenble
 		RTS
@@ -1046,8 +1038,6 @@ _DisablSprite					;cc6d
 		LDX r3L
 		LDA BitMask2,X
 		EOR #$FF
-		PHA      			;!!!hint!!!
-		PLA
 		AND mobenble
 		STA mobenble
 		RTS
@@ -1363,7 +1353,7 @@ DlgBoxProcH					;cedb
 		!byte >DBDoOPVEC,   >DBDoUSRICON
 		!byte >DBDoUSR_ROUT
 
-;!!!junk		
-		!byte $ef, $fe
+;!!!junk???
+;		!byte $ef, $fe
 
 ;PatternTab	= $cef0				; 8*32 patterns here
