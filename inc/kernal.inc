@@ -3,6 +3,9 @@
 ;by Maciej 'YTM/Alliance' Witkowiak
 ;19-3-99, 15-7-2001
 
+;bank 0 - memory swap page (move it to geos.tas when both banks are unificated)
+SWAP_PAGE 	= $fc00
+
 ;GEOS Kernal internal zpage vectors (not for use by apps)
 IconDescVec	=	$40
 CallRLo		=	$42

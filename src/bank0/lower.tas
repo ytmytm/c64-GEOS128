@@ -39,18 +39,18 @@ BGDEnt5 	LDY #O_GHCMDR_TYPE		;c7bd
 		DEY
 		STY fileHeader+1
 		+MoveW fileTrScTab, dirEntryBuf+OFF_GHDR_PTR
-		JSR LoKernal			;->c80b
+		JSR LoKernal0
 		+MoveW fileTrScTab+2, dirEntryBuf+OFF_DE_TR_SC
 		+CmpBI dirEntryBuf+OFF_GSTRUC_TYPE, VLIR	;!hint!
 		BNE BGDEnt6
-		JSR LoKernal
+		JSR LoKernal0
 BGDEnt6 	LDY #O_GHGEOS_TYPE		;c7f9
 		LDA (r9),y
 		STA dirEntryBuf+OFF_GFILE_TYPE
 		+MoveW r2, dirEntryBuf+OFF_SIZE
 	 	RTS
 
-LoKernal	+AddVW 2, r6			;c80b
+LoKernal0	+AddVW 2, r6			;c80b
 	 	RTS
 
 ; this is kinda flag

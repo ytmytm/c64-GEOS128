@@ -1,0 +1,206 @@
+;fd00 - DoBankOperation code, need to have SWAP_PAGE in shared segment
+;		*= $fd00
+
+_MoveBData_	LDY #0				;fd00
+		BEQ _DoBOp_
+_SwapBData_	LDY #2				;fd04
+		BNE _DoBOp_
+_VerifyBData_	LDY #3				;fd08
+		BNE _DoBOp_			;!!!hint remove it
+_DoBOp_		+PushB mmu+6			;fd0c
+		AND #%11110000
+		ORA #%00001000
+		STA mmu+6
+		+PushB config
+		+PushW r0
+		+PushW r1
+		+PushW r2
+		+PushW r3
+		LDA r3L
+		ROR
+		ROR
+		ROR
+		AND #%11000000
+		ORA #%00111111
+		STA r3L
+		STA config
+		LDA r3H
+		ROR
+		ROR
+		ROR
+		AND #%11000000
+		ORA #%00111111
+		STA r3H
+		TYA
+		AND #%00000011
+		BNE DoBOp1
+		JMP DoMoveBData
+DoBOp1		CMP #2				;fd54
+		BNE DoBOp2
+		JMP DoSwapBData
+DoBOp2		CMP #3				;fd5b
+		BNE DoBOp3
+		JMP DoVerifyBData
+DoBOp3		LDX r0H				;fd62
+		LDA r1H
+		STX r1H
+		STA r0H
+		LDX r0L
+		LDA r1L
+		STX r1L
+		STA r0L
+		LDX r3L
+		LDA r3H
+		STX r3H
+		STA r3L
+
+DoMoveBData	LDY r2L				;fd7a
+		BEQ DoMoveB_4
+DoMoveB_1	DEY				;fd7e
+		LDA (r0),y
+		STA SWAP_PAGE,y
+		TYA
+		BNE DoMoveB_1
+		+MoveB r3H, config
+		LDY r2L
+DoMoveB_2	DEY				;fd8e
+		LDA SWAP_PAGE,y
+		STA (r1),y
+		TYA
+		BNE DoMoveB_2
+		+AddB r2L, r0L
+		BCC DoMoveB_3
+		INC r0H
+DoMoveB_3	+AddB r2L, r1L			;fda2
+		BCC DoMoveB_4
+		INC r1H
+DoMoveB_4	LDA r2H				;fdad
+		BEQ DoMoveB_7
+		LDY #0
+		+MoveB r3L, config
+DoMoveB_5	LDA (r0),y			;fdb8
+		STA SWAP_PAGE,y
+		INY
+		BNE DoMoveB_5
+		+MoveB r3H, config
+DoMoveB_6	LDA SWAP_PAGE,y			;fdc5
+		STA (r1),y
+		INY
+		BNE DoMoveB_6
+		INC r0H
+		INC r1H
+		DEC r2H
+		+bra DoMoveB_4
+DoMoveB_7	JMP DoBOpEnd			;fdd6
+
+DoSwapBData	LDY r2L				;fdd9
+		BEQ DoSwapB_5
+DoSwapB_1	DEY				;fddd
+		LDA (r0),y
+		STA SWAP_PAGE,y
+		TYA
+		BNE DoSwapB_1
+		+MoveB r3H, config
+		LDY r2L
+DoSwapB_2	DEY				;fded
+		LDA SWAP_PAGE,y
+		TAX
+		LDA (r1),y
+		STA SWAP_PAGE,y
+		TXA
+		STA (r1),y
+		TYA
+		BNE DoSwapB_2
+		+MoveB r3L, config
+		LDY r2L
+DoSwapB_3	DEY				;fe04
+		LDA SWAP_PAGE,y
+		STA (r0),y
+		TYA
+		BNE DoSwapB_3
+		+AddB r2L, r0L
+		BCC DoSwapB_4
+		INC r0H
+DoSwapB_4	+AddB r2L, r1L			;fe18
+		BCC DoSwapB_5
+		INC r1H
+DoSwapB_5	LDA r2H				;fe23
+		BEQ DoSwapB_9
+		LDY #0
+		+MoveB r3L, config
+DoSwapB_6	LDA (r0),y			;fe2e
+		STA SWAP_PAGE,y
+		INY
+		BNE DoSwapB_6
+		+MoveB r3H, config
+DoSwapB_7	LDA SWAP_PAGE,y			;fe3b
+		TAX
+		LDA (r1),y
+		STA SWAP_PAGE,y
+		TXA
+		STA (r1),y
+		INY
+		BNE DoSwapB_7
+		+MoveB r3L, config
+DoSwapB_8	LDA SWAP_PAGE,y			;fe4f
+		STA (r0),y
+		INY
+		BNE DoSwapB_8
+		INC r0H
+		INC r1H
+		DEC r2H
+		+bra DoSwapB_5
+DoSwapB_9	+bra DoBOpEnd			;fe60
+
+DoVerifyBData	LDY r2L				;fe63
+		BEQ DoVerB_4
+DoVerB_1	DEY				;fe67
+		LDA (r0),y
+		STA SWAP_PAGE,y
+		TYA
+		BNE DoVerB_1
+		+MoveB r3H, config
+		LDY r2L
+DoVerB_2	DEY				;fe77
+		LDA SWAP_PAGE,y
+		CMP (r1),y
+		BNE DoVerB_7
+		TYA
+		BNE DoVerB_2
+		+AddB r2L, r0L
+		BCC DoVerB_3
+		INC r0H
+DoVerB_3	+AddB r2L, r1L			;fe8d
+		BCC DoVerB_4
+		INC r1H
+DoVerB_4	LDA r2H				;fe98
+		BEQ DoVerB_7
+		LDY #0
+		+MoveB r3L, config
+DoVerB_5	LDA (r0),y			;fea3
+		STA SWAP_PAGE,y
+		INY
+		BNE DoVerB_5
+		+MoveB r3H, config
+DoVerB_6	LDA SWAP_PAGE,y			;feb0
+		CMP (r1),y
+		BNE DoVerB_7
+		INY
+		BNE DoVerB_6
+		INC r0H
+		INC r1H
+		DEC r2H
+		+bra DoVerB_4
+DoVerB_7	BEQ DoVerB_8			;fec3
+		LDX #$ff
+		BNE DoBOpEnd
+DoVerB_8	LDX #0				;fec9
+DoBOpEnd	+PopW r3			;fecb
+		+PopW r2
+		+PopW r1
+		+PopW r0
+		+PopB config
+		+PopB mmu+6
+		TXA
+		RTS
+;feec

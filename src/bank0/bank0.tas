@@ -20,3 +20,7 @@ BSWFont80	!binary "bin/bswfnt80.bin"	;80 column BSW 9 point (a bit wider than 40
 !source "lower.tas"
     *=$e000
 !source "upper.tas"
+    *=$fd00
+!source	"bankops.tas"
+    *=$ff05
+!source	"lastpage.tas"

@@ -1,0 +1,63 @@
+;ff00-ff05 - MMU
+;		*=$ff05
+;ff00 - 5 MMU bytes
+;		!byte $7f, $00, $00, $00, $00
+
+IRQHandler					;ff05
+		CLD
+		PHA
+		+PushB config
+		+LoadB config, CIOIN
+		+PushB mmu+6
+		AND #%11110000
+		STA mmu+6
+		NOP
+		NOP
+		NOP
+		+PopB mmu+6
+		+PopB config
+		PLA
+EndInterrupt	RTI				;ff25
+
+;normalize address?
+EFF26		LDA zpage+1,x			;ff26
+		BPL EFF3D
+		ROL
+		BMI EFF4F
+		ROR
+		+bbrf 7, graphMode, EFF38
+		+addv $60
+		ROL zpage,x
+		ROL
+EFF38		AND #$1f			;ff38
+		STA zpage+1,x
+		RTS
+EFF3D		ROL				;ff3d
+		BPL EFF4F
+		ROR
+		+bbrf 7, graphMode, EFF4B
+		SEC
+		ADC #$a0
+		ROL zpage,x
+		ROL
+EFF4B		ORA #$e0			;ff4b
+		STA zpage+1,x
+EFF4F		RTS				;ff4f
+
+						;ff50
+LineTabL	!byte $00, $40, $80, $c0, $00, $40, $80, $c0
+		!byte $00, $40, $80, $c0, $00, $40, $80, $c0
+		!byte $00, $40, $80, $c0, $00, $40, $80, $c0
+		!byte $00
+						;ff69
+LineTabH	!byte $a0, $a1, $a2, $a3, $a5, $a6, $a7, $a8
+		!byte $aa, $ab, $ac, $ad, $af, $b0, $b1, $b2
+		!byte $b4, $b5, $b6, $b7, $b9, $ba, $bb, $bc
+		!byte $be
+;ff8a
+;some more junk...
+;		!word 1				;fff8
+;		!word EndInterrupt		;fffa
+;		!word EndInterrupt		;fffc
+;		!word IRQHandler		;fffe
+;ffff+1

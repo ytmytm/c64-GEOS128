@@ -8,6 +8,7 @@
 
 !to "kernal.bin"
 !cpu 6502
+!ct raw
 
 ;all GEOS Kernal equations...
 !source "inc/const.inc"
@@ -36,13 +37,12 @@ prntDrvMemBuff	= $d9c0		;$0640 len -> $e000
 !source "src/lokernal.tas"
 
 ;		    *=$bff0
-		    !fill $bff0-*,0
 ;bf40 - some junk here?
-		!byte $49, $00, $fc, $b8, $01, $20, $c4, $1a
-		!byte $00, $00, $bc, $b8, $03, $04, $70, $08
-
-;		    *=OS_ROM
-		    !fill OS_ROM-*,0
+;		!byte $49, $00, $fc, $b8, $01, $20, $c4, $1a
+;		!byte $00, $00, $bc, $b8, $03, $04, $70, $08
+;
+		    *=OS_ROM
+;		    !fill OS_ROM-*,0
 !source "src/kernal1-1.tas"
 ;		    *=OS_JUMPTAB
 		    !fill OS_JUMPTAB-*,0
