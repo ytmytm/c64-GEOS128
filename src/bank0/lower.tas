@@ -78,7 +78,7 @@ EC834		!byte %00000000, %00000011, %00001100, %00001111
 		!byte %11000000, %11000011, %11001100, %11001111
 		!byte %11110000, %11110011, %11111100, %11111111
 
-		!byte %00000000, %00001111, %01111111, %11101111
+EC844		!byte %00000000, %00001111, %01111111, %11101111
 		!byte %01111111, %10011111, %01111111, %10011111
 		!byte %01100111, %11100111, %00011001, %11111001
 		!byte %11111110, %01111110, %11111111, %10000000
@@ -312,11 +312,8 @@ ECA5B		SEC				;ca5b
 		RTS
 
 ; go to next VDC line
-;ca5d
-ECA5D		+AddVB r5, 80
-		LDA r5H
-		ADC #0
-		STA r5H
+; ca5d
+ECA5D		+AddVW 80, r5			;ca5d
 		RTS
 
 ;ca6b
@@ -518,7 +515,7 @@ ECC0E		LDX r0L
 		RTS
 
 ;cc13
-ECC13		+bbsf 7, r11H, ECC1F
+ECC13		+bbsf 7, r11H, ECC1F		;cc13
 		LDX #4
 		LDA E1B45+2
 		JSR ECC2C
@@ -687,12 +684,8 @@ SMsePic_0	ASL r0L				;cd67
 		ROL r0H
 		DEX
 		BPL SMsePic_0
-		LDA r0L
-		+addv $44
-		STA r0L
-		LDA r0H
-		ADC #200
-		STA r0H
+		+AddVW EC844, r0
+
 SMsePic_1	+LoadW r1, E1B6D		;cd7b
 		LDX #0
 SMsePic_2	+LoadB r4L, 8			;cd85
@@ -708,7 +701,7 @@ SMsePic_3	LDY #0				;cd89
 		DEY
 SMsePic_4	STY r3H				;cd9b
 		STY r2L
-		+AddVW r0, 2
+		+AddVW 2, r0
 		TXA
 		AND #7
 		TAY
