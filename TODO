@@ -1,5 +1,5 @@
-! VDC stuff is slightly broken (look at dialog box text input, drag icons in desktop)
-! it might be one of bank0 hints, if not go back to binary compatible, if still bad - cry
+! configure fucks up, because it tries to use driver from swap area in bank0
+
 - try binary drivers for 1571 and 1581 for boot
 + replace numbers by register names in all calls to NormalizeX
 + apply all hints
