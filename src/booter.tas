@@ -117,11 +117,14 @@ Boot6_3		LDA E5131,y			;50ff
 		jsr OpenDisk
 		JSR GetDirHead
 		+bnex Boot6_4
+		+MoveB curDirHead+0, bootTr2	; this is to get dir t&s from disk
+		+MoveB curDirHead+1, bootSec2
 		LDA #"B"
 		CMP curDirHead+OFF_GS_DTYPE
 		BEQ Boot6_4
 		STA curDirHead+OFF_GS_DTYPE
 		JSR PutDirHead
+
 Boot6_4		LDA mmu+5			;511f ;!!!hint why previous?
 		AND #%10000000
 		EOR #%10000000
@@ -148,10 +151,8 @@ Boot9		+LoadB firstBoot, $ff		;5162
 		LDA #<_EnterDeskTop
 		STA EnterDeskTop+1
 		JMP EnterDeskTop
-Boot10		LDA r1H				;5174
-		STA bootSec
-		LDA r1L
-		STA bootTr
+Boot10		+MoveB r1H, bootSec		;5174
+		+MoveB r1L, bootTr
 		+LoadW r4, diskBlkBuf
 		JSR GetBlock
 		+bnex Boot8_2
