@@ -11,7 +11,6 @@ E8FF0		= $8ff0
 		;*= $5000
 
 		SEI
-		NOP				;!!!hint
 		CLD
 		LDX #$ff
 		TXS
@@ -39,8 +38,7 @@ E8FF0		= $8ff0
 		JSR MOUSE_JMP
 		+LoadB E8890, $ff
 		+LoadB interleave, currentInterleave
-		+LoadB $9116, 1			;!!!hint copy-prot
-		LDY #8				;!!!hint LDY curDevice
+		LDY curDevice
 	!if (use1541) {
 		LDA #DRV_1541
 	} else {
@@ -51,9 +49,8 @@ E8FF0		= $8ff0
 		LDA #DRV_1581
 	}}}
 		STA _driveType,y
-		TYA
-		STA curDrive			;!!!hint remove tya above STY curDrive
-		
+		STY curDrive
+
 		LDX #0
 		LDA $5f0f
 		CMP #$13
@@ -81,18 +78,12 @@ Boot3		LDA $5f18,y			;5084
 Boot4		LDA cia1base+15			;509c
 		AND #%01111111
 		STA cia1base+15
-;		+LoadB cia1base+11, currentHour | (AMPM << 7)
-;		+LoadB cia1base+10, currentMinute
-;		+LoadW cia1base+8, 0
-;		+LoadB year, currentYear
-;		+LoadB month, currentMonth
-;		+LoadB day, currentDay
-		+LoadB cia1base+11, $81
-		+LoadW cia1base+9, 0
-		STA cia1base+8
-		+LoadB year, $58
-		+LoadB month, 8
-		+LoadB day, $16
+		+LoadB cia1base+11, currentHour | (AMPM << 7)
+		+LoadB cia1base+10, currentMinute
+		+LoadW cia1base+8, 0
+		+LoadB year, currentYear
+		+LoadB month, currentMonth
+		+LoadB day, currentDay
 		LDX #7
 		LDA #$bb
 Boot5		STA E8FE8,x			;50c7
@@ -130,12 +121,11 @@ Boot6_3		LDA E5131,y			;50ff
 		BEQ Boot6_4
 		STA curDirHead+OFF_GS_DTYPE
 		JSR PutDirHead
-Boot6_4		LDA mmu+5			;511f ;!!!hint why again?
+Boot6_4		LDA mmu+5			;511f ;!!!hint why previous?
 		AND #%10000000
 		EOR #%10000000
 		STA graphMode
 		JSR SetNewMode
-		JSR CopyrightCheck		;!!!hint
 		JMP Boot7
 
 E5131		+LoadB config, CIOIN		;5131
@@ -205,9 +195,3 @@ bootSec2	!byte 1
 bootOffs	!byte $e0
 
 bootTest	!text "GEOS"			;51ee
-
-CopyrightCheck					;51f2 !!!hint
-		LDA registeredFlag
-		BEQ E51F8
-		RTS
-E51F8

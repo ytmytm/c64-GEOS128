@@ -54,7 +54,7 @@ PatternTab	!binary "bin/patterns.bin"	    ;cef0
 !source "src/joystick.tas"
 		    *=$fe80
 !source "src/kernal5.tas"
-		    *=$ff04
+		    *=$ff05
 !source "src/kernal6.tas"
 ; CBM kernal jumptable
 		    *=$ff81
