@@ -21,6 +21,10 @@ RELOCATOR	= $0500
 
 		sei
 		+LoadB config, %00111110	; enter bank0+I/O
+		+PushB grcntrl1
+		+PushB clkreg
+		+LoadB grcntrl1, 0
+		+LoadB clkreg, 1
 		lda mmu+6
 		and #%11110000			; no sharing
 		sta mmu+6
@@ -74,6 +78,10 @@ InstallTram	lda Trampoline,x
 		inx
 		cpx #TrampolineEnd-Trampoline
 		bne InstallTram
+
+		+PopB clkreg
+		+PopB grcntrl1
+
 		jmp RELOCATOR
 
 Trampoline
