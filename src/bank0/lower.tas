@@ -97,14 +97,14 @@ EC864		LDA EC817
 EC86D		STX r0L				;c86d
 		STY r0H
 		LDA BitMask2,x
-		AND E1300
+		AND s_mobenble
 		BEQ EC87C
 		JSR ECB68
 EC87C		DEY				;c87c
 		DEY
 		DEX
 		BNE EC86D
-		STX E1300
+		STX s_mobenble
 EC884		jmp SetMMUShareTop		;c884
 
 _HideOnlyMouse_					;c888
@@ -144,7 +144,7 @@ _EE045_						;c8bc
 		BEQ EC8D1
 		LDA #0
 		LDX #$1a
-EC8C8		STA E1300,x			;c8c8
+EC8C8		STA s_mobenble,x			;c8c8
 		DEX
 		BPL EC8C8
 		STA EC817
@@ -154,7 +154,7 @@ EC8D1		+PushB dispBufferOn		;c8d1
 		LDA mobenble
 		EOR #$ff
 		ORA EC8BA
-		AND E1300
+		AND s_mobenble
 		STA EC8BB
 		BEQ EC91A
 		JSR EC8A5
@@ -167,9 +167,9 @@ EC8F2		STX r0L				;c8f2
 		AND EC8BB
 		BEQ EC915
 		JSR ECB68
-		LDA E887D,y
+		LDA scr_mobx,y
 		STA E1303,y
-		LDA E887E,y
+		LDA scr_mobx+1,y
 		STA E1304,y
 		LDA mob0ypos,y
 		STA E1313,x
@@ -177,9 +177,9 @@ EC915		DEY				;c915
 		DEY
 		DEX
 		BNE EC8F2
-EC91A		+MoveB moby2, E1301
-		+MoveB mobx2, E1302
-		+MoveB mobenble, E1300
+EC91A		+MoveB moby2, s_moby2
+		+MoveB mobx2, s_mobx2
+		+MoveB mobenble, s_mobenble
 		JSR ECA6B
 		+PopB dispBufferOn
 		JSR SetMMUShareTop
@@ -207,10 +207,9 @@ EC95D		+LoadB E8890, 0			;c95d
 		STA r2L
 		+MoveB mouseXPos+1, E8892
 		STA r1H
-		LDA mouseXPos
-		CLI
-		STA E8891
+		+MoveB mouseXPos, E8891
 		STA r1L
+		CLI
 		JSR SetMMUShareBoth
 		LDA r1L
 		AND #%00000111
@@ -284,26 +283,26 @@ ECA0F		DEY				;ca0f
 ;ca15
 ECA15		LDA E1B54			;ca15
 		BNE ECA5B
-		LDA E887E,y
+		LDA scr_mobx+1,y
 		BPL ECA27
 		LDA #0
-		STA E887D,y
-		STA E887E,y
-ECA27		LDA E887D,y			;ca27
+		STA scr_mobx,y
+		STA scr_mobx+1,y
+ECA27		LDA scr_mobx,y			;ca27
 		CMP E1303,y
 		BNE ECA58
-		LDA E887E,y
+		LDA scr_mobx+1,y
 		CMP E1304,y
 		BNE ECA58
 		LDA mob0ypos,y
 		CMP E1313,x
 		BNE ECA58
-		+CmpB mobx2, E1302
+		+CmpB mobx2, s_mobx2
 		BNE ECA58
-		+CmpB moby2, E1301
+		+CmpB moby2, s_moby2
 		BNE ECA58
 		LDA r9H
-		AND E1300
+		AND s_mobenble
 		BEQ ECA58
 		CLC
 		RTS
@@ -313,7 +312,7 @@ ECA5B		SEC				;ca5b
 
 ; go to next VDC line
 ; ca5d
-ECA5D		+AddVW 80, r5			;ca5d
+VDCNextLine		+AddVW 80, r5			;ca5d
 		RTS
 
 ;ca6b
@@ -341,11 +340,11 @@ ECA97		RTS				;ca97
 ECA98		JSR ECAB3			;ca98
 ECA9B		JSR ECBB9			;ca9b
 		JSR ECC45
-		JSR ECA5D
+		JSR VDCNextLine
 		LDA r10H
 		BEQ ECAAE
 		JSR ECC45
-		JSR ECA5D
+		JSR VDCNextLine
 ECAAE		DEC r11L
 		BNE ECA9B
 		RTS
@@ -397,11 +396,11 @@ ECB03		LDA mobx2			;cb03
 		CMP #4
 		BEQ ECB1A
 		DEC E132B,x
-ECB1A		LDA E887D,y			;cb1a
+ECB1A		LDA scr_mobx,y			;cb1a
 		STA r8L
 		AND #7
 		STA r8H
-		LDA E887E,y
+		LDA scr_mobx+1,y
 		ROR
 		ROR r8L
 		ROR
@@ -453,7 +452,7 @@ ECB86		LDX r1L				;cb86
 		DEX
 		BEQ ECBA1
 ECB93		BIT vdcreg			;cb93
-		BPL *-3
+		BPL ECB93
 		LDA (r3),y
 		STA vdcdata
 		INY
@@ -462,10 +461,9 @@ ECB93		BIT vdcreg			;cb93
 ECBA1		TYA				;cba1
 		+add r3L
 		STA r3L
-		LDA r3H
-		ADC #0
-		STA r3H
-		JSR ECA5D
+		BCC ECBAK
+		INC r3H
+ECBAK		JSR VDCNextLine
 		DEC r1H
 		BNE ECB86
 		LDX r0L
@@ -484,10 +482,9 @@ ECBC1		LDA (r4),y			;cbc1
 		TYA
 		+add r4L
 		STA r4L
-		LDA r4H
-		ADC #0
-		STA r4H
-		LDA r10L
+		BCC ECBCK
+		INC r4H
+ECBCK		LDA r10L
 		BEQ ECBDE
 		JSR ECC13
 ECBDE		LDA r8H				;cbde
@@ -551,8 +548,8 @@ ECC45		LDA E132B,x			;cc45
 		INY
 		DEX
 		BEQ ECC70
-ECC5C		BIT vdcreg			;cc5c
-		BPL *-3
+ECC5C		LDA vdcreg			;cc5c
+		BPL ECC5C
 		LDA vdcdata
 		STA (r12),y
 		ORA E1B45,y
@@ -575,7 +572,7 @@ ECC7E		LDA E132B,x			;cc7e
 		DEX
 		BEQ ECC9D
 ECC8E		BIT vdcreg			;cc8e
-		BPL *-3
+		BPL ECC8E
 		LDA E1B4C,y
 		STA vdcdata
 		INY
@@ -593,7 +590,7 @@ _TempHideMouse_					;cca2
 		JSR SetMMUShareTop
 		PLP
 		BPL TmpHMse_0
-		LDA E1300
+		LDA s_mobenble
 		BEQ TmpHidMseEnd
 TmpHMse_0	LDX #0				;ccb8
 TmpHMse_1	LDA r0L,x			;ccba

@@ -995,11 +995,11 @@ _PosSprite					;cc0e
 		STA mob0ypos,Y
 		+bbrf 7, graphMode, PSpr0
 		LDA r4H
-		STA E887E,Y
+		STA scr_mobx+1,Y
 		LSR
 		STA r4H
 		LDA r4L
-		STA E887D,Y
+		STA scr_mobx,Y
 		ROR
 		STA r4L
 PSpr0		LDA r4L				;cc33

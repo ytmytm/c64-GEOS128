@@ -55,9 +55,9 @@ E0E2E		=	$0e2e		; copied code to execute BASIC
 E0EDA		=	$0eda		; nmi vector in copied code (calculate this!)
 
 ; sprite emulator stuff (bank0 - lower)
-E1300		=	$1300		; mobenble copy
-E1301		=	$1301		; moby2 copy
-E1302		=	$1302		; mobx2 copy
+s_mobenble	=	$1300		; mobenble copy
+s_moby2		=	$1301		; moby2 copy
+s_mobx2		=	$1302		; mobx2 copy
 E1303		=	$1303
 E1304		=	$1304
 E1313		=	$1313
@@ -147,8 +147,7 @@ RecordDirOffs	=	$8877
 RecordTableTS	=	$8879
 verifyFlag	=	$887b
 TempCurDrive	=	$887c
-E887D		=	$887d
-E887E		=	$887e
+scr_mobx		=	$887d		; sprite screen (0-319/639) X pos
 E888D		=	$888d		; used in bitmap functions
 E888E		=	$888e
 E888F		=	$888f
