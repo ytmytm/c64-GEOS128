@@ -31,6 +31,10 @@
 !set SelectFlashDelay	= 10				; 10 in 1/50 s
 !set SerialNumberValue	= $1cd5 			; $1cd5
 
+;general code generation/optimization control:
+!set onlyVLIR		=	true		; only VLIR and SEQ supported
+!set removeToBASIC	=	true		; shorter code if you don't use BASIC rebooter
+
 ;if both menu separator patterns are null, then kernal menu code
 ;will be a bit optimized for speed and space
 !set menuVSeparator	= %#.#.#.#.			; %10101010 ;both=0 -> speed&space
