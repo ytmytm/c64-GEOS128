@@ -197,7 +197,6 @@ Font_1						;e1c9
 		STY E8804
 		STA r5L
 		JSR GetChWdth1
-		TYA
 		PHA
 		LDA r5L
 		ASL
@@ -436,7 +435,7 @@ Font_211	CMP #3				;e3a3
 		+add r12L
 		TAX
 		LDA Font_tab2,x
-		+addv <FontSH1
+		ADC #<FontSH1
 		TAY
 		LDA #0
 		ADC #>FontSH1
@@ -559,7 +558,8 @@ Font4_B2 = *+1
 		STA (r6),y
 		STA (r5),y
 		RTS
-Font_43 	EOR r10L			;e49e
+Font_43 	LDA Z46,x			;e49e
+		EOR r10L
 		AND r9H
 		EOR #$ff
 		ORA r3L
@@ -638,6 +638,7 @@ EE52F	= *+1
 EE533		LDA Z46,x			;e533
 		EOR r10L
 		AND r9H
+		EOR #$ff
 		ORA r3L
 		ORA r4H
 		EOR #$ff
@@ -792,6 +793,9 @@ _Font_10_ 					;e676
 		TYA
 		JSR Font_1
 		BCS Font_108
+		JSR _TempHideMouse_
+		+bbrf 7, graphMode, Font_100
+		JMP EE708
 Font_100	CLC				;e68a
 		LDA currentMode
 		AND #SET_UNDERLINE | SET_ITALIC
@@ -1375,7 +1379,7 @@ IniTxPrm4	STA spr1pic,x			;eb2e
 		INX
 		INX
 		DEY
-		BPL IniTxPrm4
+		BNE IniTxPrm4
 		RTS
 
 PrepareXCoord					;eb38
@@ -1570,6 +1574,7 @@ ILin80		PLP				;eccd
 		JSR EF522
 		+bra ILin80_2
 ILin80_1	DEX				;ece7
+		BMI ILin80_3
 		JSR ILin80_Help
 ILin80_2	EOR #$ff			;eced
 		STA E1CED,x
@@ -1579,7 +1584,7 @@ ILin80_2	EOR #$ff			;eced
 		+bra ILin80_1
 ILin80_3	+PopW r5			;ecfb
 		LDA E1CED
-		EOR r9L
+		EOR r8H
 		STA E1CED
 		LDX r4L
 		DEX
@@ -1628,7 +1633,7 @@ _RecoverLine_					;ed68
 		STA dispBufferOn
 		JSR PrepareXCoord
 		+bbrf 7, graphMode, RLin0
-		JSR Write80Line
+		JMP Write80Line
 RLin0		+PopB dispBufferOn		;ed85
 		LDY r3L
 		LDA r3H
@@ -1789,7 +1794,7 @@ VLin80		+PushW r3			;eee1
 		LDX r3L
 		STX r7L
 		JSR _GetScanLine_
-		+MoveB r4, r3
+		+MoveW r4, r3
 		JSR EF6C1
 		LDA BitMask1,x
 		STA r7H
@@ -1988,8 +1993,8 @@ DrwLin2		+MoveW r7, r9			;f09b
 		+LoadB r13L, 1
 DrwLin3		+PushW r3			;f0de
 		+MoveW r4, r3
-		+MoveW r11H, r11L
-		+PopB r4
+		+MoveB r11H, r11L
+		+PopW r4
 		+bra DrwLin5
 DrwLin4 	LDY r11H			;f0f9
 		CPY r11L
@@ -2027,6 +2032,7 @@ DrawLine2	+MoveW r12, r9			;f140
 		STA r10L
 		LDA r12H
 		SBC r7H
+		STA r10H
 		LDY #1
 		LDX #r10
 		JSR DShiftLeftBank0
@@ -2125,7 +2131,7 @@ _TestPoint_					;f266
 		LDX #r3
 		JSR EFF26
 		LDX r11L
-		JSR _GetScanLine
+		JSR _GetScanLine_
 		+bbsf 7, graphMode, TestPoi80
 		LDA r3L
 		AND #%11111000
@@ -2176,10 +2182,10 @@ SClrMod_3	LDA (r0),y			;f2c6
 		CPX #25
 		BNE SClrMod_4
 		LDA vdcreg
-		AND #00000111
+		AND #%00000111
 		BEQ SClrMod_4
 		LDA (r0),y
-		ORA #00000111
+		ORA #%00000111
 		STA (r0),y
 SClrMod_4	JSR GetVDCRegister		;f2df
 		CMP (r0),y
@@ -2218,7 +2224,7 @@ SetColorModeTabL				;f31b
 
 ColorModeTab0					;f320
 		!byte $04,$20,  $06,$19,  $07,$1c,  $09,$e7
-		!byte $14,$38,  $15,$80,  $19,$87,  $24,$f5
+		!byte $14,$38,  $15,$80,  $19,$80,  $24,$f5
 		!byte $ff
 
 ColorModeTab1					;f331
@@ -2394,6 +2400,7 @@ EF4C5		STX EF4F2			;f4c5
 		STX vdcreg
 		LDX r6H
 EF4CF		BIT vdcreg			;f4cf
+		BPL EF4CF
 		STX vdcdata
 		LDX #19
 		STX vdcreg
@@ -2503,10 +2510,10 @@ EF596		BIT vdcreg			;f596
 		LDX #31
 		STX vdcreg
 EF5A4 = *+1
-		LDX #30
+		LDX #0
 EF5A5		BIT vdcreg			;f5a5
 		BPL EF5A5
-EF5AA		STA vdcdata			;f5aa
+EF5AA		LDA vdcdata			;f5aa
 		RTS
 
 ;another one called only from that one that seems-to-be-never-called
@@ -2613,8 +2620,6 @@ GSC80		TXA				;f659
 		PHA
 		STX r5H
 		LDA #0
-		LSR r5H
-		ROR
 		LSR r5H
 		ROR
 		LSR r5H
@@ -2887,7 +2892,7 @@ DoMoveB_5	LDA (r0),y			;fdb8
 DoMoveB_6	LDA SWAP_PAGE,y			;fdc5
 		STA (r1),y
 		INY
-		BNE DoMoveB_7
+		BNE DoMoveB_6
 		INC r0H
 		INC r1H
 		DEC r2H
@@ -2986,6 +2991,8 @@ DoVerB_5	LDA (r0),y			;fea3
 DoVerB_6	LDA SWAP_PAGE,y			;feb0
 		CMP (r1),y
 		BNE DoVerB_7
+		INY
+		BNE DoVerB_6
 		INC r0H
 		INC r1H
 		DEC r2H
