@@ -1,6 +1,6 @@
 - currently system boot has some bugs:
     - no disk init (do OpenDisk before disk calls)
-    - auto-exec calls don't work (system error, try GEOS64 booter code)
+    - auto-exec calls don't work (system error?)
     - there's no loader, but code could be safely loaded from BASIC (AFAIK)
 - reassemble C128's 1541 driver (only Init/DoneForIO should differ), because for
   yet unknown reasons 1541 cpu jams when using binary only code, good enough that

@@ -114,6 +114,7 @@ Boot6_3		LDA E5131,y			;50ff
 		DEY
 		BPL Boot6_3
 		+PopB mmu+6
+		jsr OpenDisk
 		JSR GetDirHead
 		+bnex Boot6_4
 		LDA #"B"

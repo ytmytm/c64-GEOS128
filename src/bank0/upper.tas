@@ -1,5 +1,5 @@
 
-; 30,31-08.2000, 1-09.2000, 6-09.2000, 20-22.09.2000
+; 30,31-08.2000, 1-09.2000, 6-09.2000, 20-22.09.2000, 14.07.2001
 			;*=$e000
 _HorizontalLine		JMP _HorizontalLine_		;e000
 _InvertLine		JMP _InvertLine_		;e003
@@ -446,10 +446,9 @@ Font_214	STA r12H			;e3ca
 		STY r12L
 		RTS
 
-;!!! I hope that's correct (too less bytes...)
 Font_tab2					;e3cf
-		!byte <(FntSh54-FontSH1)
-		!byte <(FontSH3-FontSH1+0)       ;
+		!byte <(FntSh54_End-FontSH1)
+		!byte <(FontSH3-FontSH1+0)
 		!byte <(FontSH3-FontSH1+1)
 		!byte <(FontSH3-FontSH1+2)
 		!byte <(FontSH3-FontSH1+3)
@@ -464,14 +463,30 @@ Font_tab2					;e3cf
 		!byte <(FontSH1-FontSH1+2)
 		!byte <(FontSH1-FontSH1+1)
 		!byte <(FontSH1-FontSH1+0)
-		!byte <(FntSh54-FontSH1)
+		!byte <(FntSh54_End-FontSH1)
+		!byte <(FontSH_U2-FontSH1+0)
+		!byte <(FontSH_U2-FontSH1+3)
+		!byte <(FontSH_U2-FontSH1+6)
+		!byte <(FontSH_U2-FontSH1+9)
+		!byte <(FontSH_U2-FontSH1+12)
+		!byte <(FontSH_U2-FontSH1+15)
+		!byte <(FontSH_U2-FontSH1+18)
+		!byte <(FontSH_U1-FontSH1+21)
+		!byte <(FontSH_U1-FontSH1+18)
+		!byte <(FontSH_U1-FontSH1+15)
+		!byte <(FontSH_U1-FontSH1+12)
+		!byte <(FontSH_U1-FontSH1+9)
+		!byte <(FontSH_U1-FontSH1+6)
+		!byte <(FontSH_U1-FontSH1+3)
+		!byte <(FontSH_U1-FontSH1+0)
+		!byte <(FntSh54_End-FontSH1)
 		!byte <(FontSH4-FontSH1+0)
 		!byte <(FontSH4-FontSH1+5)
 		!byte <(FontSH4-FontSH1+10)
 		!byte <(FontSH4-FontSH1+15)
 		!byte <(FontSH4-FontSH1+20)
 		!byte <(FontSH4-FontSH1+25)
-		!byte <(FontSH4-FontSH1+30)	;
+		!byte <(FontSH4-FontSH1+30)
 		!byte <(FontSH2-FontSH1+35)
 		!byte <(FontSH2-FontSH1+30)
 		!byte <(FontSH2-FontSH1+25)
@@ -480,11 +495,6 @@ Font_tab2					;e3cf
 		!byte <(FontSH2-FontSH1+10)
 		!byte <(FontSH2-FontSH1+5)
 		!byte <(FontSH2-FontSH1+0)
-; jeszcze jeden taki 16 bajtowy ciag - rosnie/maleje co 5
-; poczatek: $45=FontSH3-FontSH1+0-3, $6a=FontSH4-FontSH1+30+5+1
-		!byte <(FntSh54-FontSH1)
-		!byte $6a, $6f, $74, $79, $7e, $83, $88
-		!byte $45, $40, $3b, $36, $31, $2c, $27, $22
 
 Font_3		LDA currentMode 		;e3ff
 		BPL Font_32
@@ -1004,7 +1014,7 @@ FontSH3 	ASL				;e821
 		ASL
 		ASL
 		JMP FntShJump
-FontSH_U2	ASL Z46+1
+FontSH_U2	ASL Z46+1			;e82b
 		ROL
 		ASL Z46+1
 		ROL
@@ -1067,7 +1077,7 @@ FntSh54 	ASL Z46+7			;e888
 		BNE FntSh54
 		LDA Z46
 		JMP FntShJump
-
+FntSh54_End					;e8a0
 ; end of indexed table, keep on changin'
 
 EE8A0		RTS				;e8a0 ;!!!hint
@@ -2224,7 +2234,7 @@ SetColorModeTabL				;f31b
 
 ColorModeTab0					;f320
 		!byte $04,$20,  $06,$19,  $07,$1c,  $09,$e7
-		!byte $14,$38,  $15,$80,  $19,$80,  $24,$f5
+		!byte $14,$38,  $15,$80,  $19,$87,  $24,$f5	;!!! was $19,$80
 		!byte $ff
 
 ColorModeTab1					;f331

@@ -1,6 +1,4 @@
 
-;TODO:font table offsets @$e3cf
-
 ;all GEOS Kernal equations...
 !source "../../inc/const.inc"
 !source "../../inc/geossym.inc"
@@ -10,7 +8,7 @@
 !source "../../inc/diskdrv.inc"
 
 !cpu 6502
-!to "bank0.prg"
+!to "bank0.bin"
 
 RegisterJMP	= $9d80	; this is from lokernal.tas in kernal bank
 
@@ -39,7 +37,7 @@ E1B4C	= $1b4c
 E1B54	= $1b54
 E1B55	= $1b55
 E1B6D	= $1b6d
-E1C00	= $1c00		;
+E1C00	= $1c00
 E1C2D	= $1c2d
 E1CED	= $1ced		; VDC linebuffer?
 
