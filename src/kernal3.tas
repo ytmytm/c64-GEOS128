@@ -387,21 +387,23 @@ PutDec3 	PLA				;e411
 		BNE PutDec3
 		RTS
 
+; printer driver cache
 PrntDrvMemTab	!word prntDrvMemBuff		;e41a
 		!word PRINTBASE
 		!word $0640
 		!byte $01, $01
 
+; file header for printer driver
 FileHeadMemTab	!word fileHeadMemBuff		;e422
 		!word fileHeader
 		!word $0100
 
 _GetFile					;e428
 		+bbrf 4, sysRAMFlg, GetFileCont
-		+CmpBI r6H, $84
+		+CmpBI r6H, >PrntFilename
 		BNE GetFileCont
 		LDA r6L
-		+subv $65
+		+subv <PrntFilename
 		ORA r0L
 		BNE GetFileCont
 		LDY #7
