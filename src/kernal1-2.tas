@@ -209,7 +209,7 @@ KbdScanHelp1	STA r0L 			;c511
 		+LoadB r1L, 7
 KbdScanHlp_10	LDA r0L 			;c517
 		LDX r1L
-		AND BitMask2,x
+		AND BitMask0,x
 		BEQ KbdScanHlp_11
 		JSR KbdScanHelp101
 KbdScanHlp_11	DEC r1L				;c523
@@ -261,7 +261,7 @@ KbdScanHlp_107	LDY r0H 			;c580
 		BEQ KbdScanHlp_108
 		LDX r1L
 		LDA r0L
-		AND BitMask2,x
+		AND BitMask0,x
 		AND KbdDMltTab,y
 		BEQ KbdScanHlp_108
 		+LoadB KbdQueFlag, 15
@@ -689,7 +689,7 @@ _i_FillRam					;c977
 		JMP _DoInlineReturn
 
 						;c989
-BitMask2	!byte $01, $02, $04, $08, $10, $20, $40, $80
+BitMask0	!byte $01, $02, $04, $08, $10, $20, $40, $80
 
 InitMsePic					;c991
 		!byte %######.., %........, %........
@@ -1011,7 +1011,7 @@ PSpr0		LDA r4L				;cc33
 		LDA r6L
 		STA mob0xpos,Y
 		LDX r3L
-		LDA BitMask2,X
+		LDA BitMask0,X
 		EOR #$FF
 		AND msbxpos
 		TAY
@@ -1019,21 +1019,21 @@ PSpr0		LDA r4L				;cc33
 		AND r6H
 		BEQ PSpr1
 		TYA
-		ORA BitMask2,X
+		ORA BitMask0,X
 		TAY
 PSpr1		STY msbxpos			;cc5b
 		RTS
 
 _EnablSprite					;cc5f
 		LDX r3L
-		LDA BitMask2,X
+		LDA BitMask0,X
 		ORA mobenble
 		STA mobenble
 		RTS
 
 _DisablSprite					;cc6d
 		LDX r3L
-		LDA BitMask2,X
+		LDA BitMask0,X
 		EOR #$FF
 		AND mobenble
 		STA mobenble
