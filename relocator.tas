@@ -56,6 +56,13 @@ InstallRel	lda RelMoveData,x
 		+LoadB r2L, 16
 		jsr RELOCATOR
 
+		+LoadW r0, $9000
+		+LoadW r1, $d000
+		+LoadB r3L, 0
+		+LoadB r3H, 0
+		+LoadB r2L, 16
+		jsr RELOCATOR
+
 		+LoadW r0, $a000
 		+LoadW r1, $e000
 		+LoadB r3L, 0

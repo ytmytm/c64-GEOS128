@@ -1,5 +1,3 @@
-! configure fucks up, because it tries to use driver from swap area in bank0
-
 - try binary drivers for 1571 and 1581 for boot
 + replace numbers by register names in all calls to NormalizeX
 + apply all hints
