@@ -31,17 +31,21 @@ prntDrvMemBuff	= $d9c0		;$0640 len -> $e000
 		    *=DISK_BASE
 !source "drv1541.tas"
 
-		    *=DISK_BASE+DISK_DRV_LGH
+;		    *=DISK_BASE+DISK_DRV_LGH
+		    !fill DISK_BASE+DISK_DRV_LGH-*, 0
 !source "src/lokernal.tas"
 
-		    *=$bff0
+;		    *=$bff0
+		    !fill $bff0-*,0
 ;bf40 - some junk here?
 		!byte $49, $00, $fc, $b8, $01, $20, $c4, $1a
 		!byte $00, $00, $bc, $b8, $03, $04, $70, $08
 
-		    *=OS_ROM
+;		    *=OS_ROM
+		    !fill OS_ROM-*,0
 !source "src/kernal1-1.tas"
-		    *=OS_JUMPTAB
+;		    *=OS_JUMPTAB
+		    !fill OS_JUMPTAB-*,0
 !source "src/c100jmp.tas"
 !source "src/kernal1-2.tas"
 ;--------------------------------------------
@@ -51,21 +55,27 @@ PatternTab	!binary "bin/patterns.bin"	    ;cef0
 		!byte $80, $10, $02, $20, $01, $08, $40, $04
 ;--------------------------------------------
 ;kernal under I/O, partially, rest is printer driver backup and fileHeader backup
-		    *=$d000
+;		    *=$d000
+		    !fill $d000-*,0
 !source "src/kernal2.tas"
 ;--------------------------------------------
-		    *=$e000
+;		    *=$e000
+		    !fill $e000-*,0
 !source "src/e000jmp.tas"
 !source "src/kernal3.tas"
 !source "src/kernal4.tas"
-		    *=$fd00
+;		    *=$fd00
+		    !fill $fd00-*,0
 !source "src/joystick.tas"
-		    *=$fe80
+;		    *=$fe80
+		    !fill $fe80-*,0
 !source "src/kernal5.tas"
-		    *=$ff05
+;		    *=$ff05
+		    !fill $ff05-*,0
 !source "src/kernal6.tas"
 ; CBM kernal jumptable
-		    *=$ff81
+;		    *=$ff81
+		    !fill $ff81-*,0
 		!for Count, 38 {
 		JSR ExecCBMKernal
 		}
