@@ -31,6 +31,12 @@
 !set SelectFlashDelay	= 10				; 10 in 1/50 s
 !set SerialNumberValue	= $1cd5 			; $1cd5
 
+;makes drawing dialog boxes much faster, might cause visual mess
+;takes more bytes
+!set speedupDlgBox	= true
+
+;equates below are unsupported now (except REU)
+
 ;general code generation/optimization control:
 !set onlyVLIR		=	true		; only VLIR and SEQ supported
 !set removeToBASIC	=	true		; shorter code if you don't use BASIC rebooter
