@@ -9,7 +9,7 @@
 + replace numbers by register names in all calls to NormalizeX
 + apply all hints
 + change all jumps to kernal table (except diskdrv) by appropriate single underscore jump
-- look if 2MHz can be ON during keyboardscanning (use geoPatch on living kernal)
++ look if 2MHz can be ON during keyboardscanning (use geoPatch on living kernal)
 - look what can be done with relocatable stack/zpage for IRQ (to avoid copying data)
 - look what can be done with relocatable stack and PHA/PLA for memory copying/fill functions
 - look what can be done with Z80
