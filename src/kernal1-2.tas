@@ -1,0 +1,1369 @@
+
+;		*=$c2fe
+_GetPtrCurDkNm					;c2fe
+		LDY curDrive
+		LDA DkNmTab-8,Y
+		STA zpage,X
+		LDA DkNmTab-4,Y
+		STA zpage+1,X
+		RTS
+		
+_CallRoutine					;c30c		
+		CMP #0
+		BNE CRou1
+		CPX #0
+		BEQ CRou2
+CRou1		STA CallRLo			;c314
+		STX CallRHi
+		JMP (CallRLo)
+CRou2		RTS				;c31b
+
+_DoInlineReturn 				;c31c
+		+add returnAddress
+		STA returnAddress
+		BCC DILR1
+		INC returnAddress+1
+DILR1		PLP				;c325
+		JMP (returnAddress)
+
+_NormalizeX					;c329
+		LDA zpage+1,x
+		BPL NormX2
+		ROL
+		BMI NormX4
+		ROR
+		+bbrf 7, graphMode, NormX1
+		+addv $60
+		ROL zpage,x
+		ROL
+NormX1		AND #%00011111			;c33b
+		STA zpage+1,x
+		RTS
+NormX2		ROL				;c340
+		BPL NormX4
+		ROR
+		+bbrf 7, graphMode, NormX3
+		SEC
+		ADC #$a0
+		ROL zpage,x
+		ROL
+NormX3		ORA #$e0			;c34e
+		STA zpage+1,x
+NormX4		RTS				;c352
+
+CheckFileVideoFlags				;c353
+		+bbsf 7, graphMode, CFVF_2
+		+bbrf 7, fileHeader+O_128_FLAGS, CFVF_3
+CFVF_1		LDX #INCOMPATIBLE		;c35c
+		RTS
+CFVF_2		+bbrf 6, fileHeader+O_128_FLAGS, CFVF_1
+CFVF_3		LDX #0
+		RTS
+
+_DoCheckButtons					;c367
+		+bbrf 7, E881A, DoChkBtns01
+		JSR TempHideMouse
+		+LoadB r3L, 1
+		+MoveW stringX, r4
+		+MoveB stringY, r5L
+		JSR PosSprite
+		JSR EnablSprite
+		CLV
+DoChkBtns01	BVC DoChkBtns02			;c389
+		JSR TempHideMouse
+		+LoadB r3L, 1
+		JSR DisablSprite
+DoChkBtns02	+LoadB E881A, 0			;c395
+		+bbrf 7, graphMode, DoChkBtns03
+		JSR EE045
+DoChkBtns03	+bbrf INPUT_BIT, pressFlag, DoChkBtns1
+		+rmbf INPUT_BIT, pressFlag
+		LDA inputVector
+		LDX inputVector+1
+		JSR CallRoutine
+DoChkBtns1	+bbrf MOUSE_BIT, pressFlag, DoChkBtns2	;c3a1
+		+rmbf MOUSE_BIT, pressFlag
+		LDA mouseVector
+		LDX mouseVector+1
+		JSR CallRoutine
+DoChkBtns2	+bbrf KEYPRESS_BIT, pressFlag, DoChkBtns3	;c3b4
+		JSR KbdScanHelp3
+		LDA keyVector
+		LDX keyVector+1
+		JSR CallRoutine
+DoChkBtns3	LDA faultData			;c3d9
+		BEQ DoChkBtns4
+		LDA mouseFaultVec
+		LDX mouseFaultVec+1
+		JSR CallRoutine
+		LDA #NULL
+		STA faultData
+DoESC_RULER					;!!!hint - move it to conio stuff!!!
+DoChkBtns4	RTS				;c3ec
+
+_IRQHandlerMain					;c3ed
+		TXA
+		PHA
+		TYA
+		PHA
+		TSX
+		LDA zpage+$108,x
+		AND #$10
+		BEQ IRQHand_1
+		JMP (BRKVector)
+IRQHand_1	+PushB bank0SaveMMU		;c3fc
+		+PushB bank0SaveA
+		+PushB bank0SavePS
+		+PushW bank0JMP+1
+		+PushB IOJump+1
+		+PushB IOConfSave+1
+		+PushW CallRLo
+		+PushW returnAddress
+		LDX #0
+IRQHand2	LDA r0,x			;c426
+		PHA
+		INX
+		CPX #32
+		BNE IRQHand2
+		LDA dblClickCount
+		BEQ IRQHand3
+		DEC dblClickCount
+IRQHand3	JSR ProcessMouse		;c436
+		LDY KbdQueFlag
+		BEQ IRQHand4
+		INY
+		BEQ IRQHand4
+		DEC KbdQueFlag
+IRQHand4	JSR _DoKeyboardScan
+		JSR SetMouse_64
+ 		LDA alarmWarnFlag
+		BEQ IRQHand5
+		DEC alarmWarnFlag
+IRQHand5	LDA intTopVector		;c452
+		LDX intTopVector+1
+		JSR CallRoutine
+		LDA intBotVector
+		LDX intBotVector+1
+		JSR CallRoutine
+		+LoadB grirq, 1
+		LDX #31
+IRQHand6	PLA				;c46b
+		STA r0,x
+		DEX
+		BPL IRQHand6
+		+PopW returnAddress
+		+PopW CallRLo
+		+PopB IOConfSave+1
+		+PopB IOJump+1
+		+PopW bank0JMP+1
+		+PopB bank0SavePS
+		+PopB bank0SaveA
+		+PopB bank0SaveMMU
+ 		PLA
+		TAY
+		PLA
+		TAX
+		RTS
+
+_DoKeyboardScan					;c49e
+		+PushB clkreg
+		+LoadB clkreg, 0
+ 		LDA KbdQueFlag
+		BNE DoKbdScan1
+		LDA KbdNextKey
+		JSR KbdScanHelp2
+		+LoadB KbdQueFlag, 15
+DoKbdScan1	+LoadB r1H, 0			;c4b7
+		JSR KbdScanRow
+		BNE DoKbdScan5
+		JSR KbdScanHelp5
+		LDY #10
+DoKbdScan2	JSR KbdScanRow			;c4c5
+		BNE DoKbdScan5
+		CPY #8
+		BCC DoKbdScan22
+		LDA KbdTestTab-8,Y
+		STA keyreg
+		BNE DoKbdScan23
+DoKbdScan22	LDA KbdTestTab,y		;c4d6
+		STA cia1base+0
+DoKbdScan23	LDA cia1base+1			;c4dc
+		CMP KbdDBncTab,y
+		STA KbdDBncTab,y
+		BNE DoKbdScan4
+		CMP KbdDMltTab,y
+		BEQ DoKbdScan4
+		PHA
+		EOR KbdDMltTab,y
+		BEQ DoKbdScan3
+		JSR KbdScanHelp1
+DoKbdScan3	PLA				;c4f5
+		STA KbdDMltTab,y
+DoKbdScan4	DEY				;c4f9
+		BPL DoKbdScan2
+DoKbdScan5	+PopB clkreg			;c4fc
+		RTS
+		
+KbdScanRow	+LoadB cia1base+0, $ff		;c501
+		+LoadB keyreg, $ff		;!!!hint!!!
+		+CmpBI cia1base+1, $ff
+		RTS
+
+KbdScanHelp1	STA r0L 			;c511
+		+LoadB r1L, 7
+KbdScanHlp_10	LDA r0L 			;c517
+		LDX r1L
+		AND BitMask2,x
+		BEQ KbdScanHlp_11
+		JSR KbdScanHelp101
+KbdScanHlp_11	DEC r1L				;c523
+		BPL KbdScanHlp_10
+		RTS
+
+KbdScanHelp101					;c528
+		TYA
+		ASL
+		ASL
+		ASL
+		ADC r1L
+		TAX
+		+bbrf 7, r1H, KbdScanHlp_101
+		LDA KbdDecodeTab2,x		
+		+bra KbdScanHlp_102
+KbdScanHlp_101	LDA KbdDecodeTab1,x		;c539
+KbdScanHlp_102	STA r0H 			;c53c
+		LDA CPU_DATA
+		AND #%01000000
+		BNE KbdScanHlp_121
+		LDA r0H
+		JSR KbdScanHelp6
+		STA r0H
+KbdScanHlp_121	+bbrf 5, r1H, KbdScanHlp_103	;c54b
+		LDA r0H
+		JSR KbdScanHelp6
+		CMP #"A"
+		BCC KbdScanHlp_103
+		CMP #"Z"+1
+		BCS KbdScanHlp_103
+		+subv $40
+		STA r0H
+KbdScanHlp_103	+bbrf 6, r1H, KbdScanHlp_104	;c563
+		+smbf 7, r0H
+KbdScanHlp_104	LDA r0H 			;c56d
+		STY r0H
+		LDY #8
+KbdScanHlp_105	CMP KbdTab1,y			;c573
+		BEQ KbdScanHlp_106
+		DEY
+		BPL KbdScanHlp_105
+		BMI KbdScanHlp_107
+KbdScanHlp_106	LDA KbdTab2,y			;c57d
+KbdScanHlp_107	LDY r0H 			;c580
+		STA r0H
+		AND #%01111111
+		CMP #%00011111
+		BEQ KbdScanHlp_108
+		LDX r1L
+		LDA r0L
+		AND BitMask2,x
+		AND KbdDMltTab,y
+		BEQ KbdScanHlp_108
+		+LoadB KbdQueFlag, 15
+		+MoveB r0H, KbdNextKey
+		JMP KbdScanHelp2
+
+KbdScanHlp_108	+LoadB KbdQueFlag, $ff		;fbfa
+		+LoadB KbdNextKey, 0
+		RTS
+
+KbdTestTab	!byte $fe, $fd, $fb, $f7, $ef, $df, $bf, $7f	;c5ae
+
+KbdTab1 					;c5b6
+		!byte $db, $dd, $de, $ad, $af, $aa, $c0, $ba, $bb
+KbdTab2 					;c5bf
+		!byte $7b, $7d, $7c, $5f, $5c, $7e, $60, $7b, $7d
+
+KbdDecodeTab1					;c5c8
+		!byte KEY_DELETE, CR, KEY_RIGHT, KEY_F7, KEY_F1, KEY_F3, KEY_F5, KEY_DOWN
+		!byte "3", "w", "a", "4", "z", "s", "e", KEY_INVALID
+		!byte "5", "r", "d", "6", "c", "f", "t", "x"
+		!byte "7", "y", "g", "8", "b", "h", "u", "v"
+		!byte "9", "i", "j", "0", "m", "k", "o", "n"
+		!byte "+", "p", "l", "-", ".", ":", "@", ","
+		!byte KEY_BPS, "*", ";", KEY_HOME, KEY_INVALID, "=", "^", "/"
+		!byte "1", KEY_LARROW, KEY_INVALID, "2", " ", KEY_INVALID, "q", KEY_STOP
+		!byte KEY_HELP, "8", "5", KEY_TAB, "2", "4", "7", "1"
+		!byte KEY_ESC, "+", "-", KEY_LF, KEY_ENTER, "6", "9", "3"
+		!byte KEY_ALT, "0", ".", KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_NOSCRL
+
+KbdDecodeTab2					;c620
+		!byte KEY_INSERT, CR, BACKSPACE, KEY_F8, KEY_F2, KEY_F4, KEY_F6, KEY_UP
+		!byte "#", "W", "A", "$", "Z", "S", "E", KEY_INVALID
+		!byte "%", "R", "D", "&", "C", "F", "T", "X"
+		!byte "'", "Y", "G", "(", "B", "H", "U", "V"
+		!byte ")", "I", "J", "0", "M", "K", "O", "N"
+		!byte "+", "P", "L", "-", ">", "[", "@", "<"
+		!byte KEY_BPS, "*", "]", KEY_CLEAR, KEY_INVALID, "=", "^", "?"
+		!byte "!", KEY_LARROW, KEY_INVALID, $22, " ", KEY_INVALID, "Q", KEY_RUN
+		!byte KEY_HELP, "8", "5", KEY_TAB, "2", "4", "7", "1"
+		!byte KEY_ESC, "+", "-", KEY_LF, KEY_ENTER, "6", "9", "3"
+		!byte KEY_ALT, "0", ".", KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_NOSCRL
+
+KbdScanHelp2	PHP				;c678
+		SEI
+		PHA
+		+smbf KEYPRESS_BIT, pressFlag
+		LDX KbdQueTail
+		PLA
+		STA KbdQueue,x
+		JSR KbdScanHelp4
+		CPX KbdQueHead
+		BEQ KbdScanHlp_21
+		STX KbdQueTail
+KbdScanHlp_21	PLP				;c693
+		RTS
+
+KbdScanHelp3	PHP				;c695
+		SEI
+		LDX KbdQueHead
+		LDA KbdQueue,x
+		STA keyData
+		JSR KbdScanHelp4
+		STX KbdQueHead
+		CPX KbdQueTail
+		BNE KbdScanHlp_31
+		+rmb KEYPRESS_BIT, pressFlag
+KbdScanHlp_31	PLP				;c6b3
+		RTS
+
+KbdScanHelp4	INX				;c6b5
+		CPX #16
+		BNE KbdScanHlp_41
+		LDX #0
+KbdScanHlp_41	RTS				;c6bc
+
+_GetNextChar					;c6bd
+		+bbrf KEYPRESS_BIT, pressFlag, GetNxtChar1
+		JMP KbdScanHelp3
+GetNxtChar1	LDA #0				;c6c4
+		RTS
+
+KbdScanHelp5	+LoadB cia1base+0, %11111101	;c6c7
+		LDA cia1base+1
+		EOR #$ff
+		AND #%10000000
+		BNE KbdScanHlp_51
+		+LoadB cia1base+0, %10111111
+		LDA cia1base+1
+		EOR #$ff
+		AND #%00010000
+		BEQ KbdScanHlp_52
+KbdScanHlp_51	+smbf 7, r1H			;c6e3
+KbdScanHlp_52	+LoadB cia1base+0, %01111111	;c6e9
+		LDA cia1base+1
+		EOR #$ff
+		AND #%00100000
+		BEQ KbdScanHlp_53
+		+smbf 6, r1H
+KbdScanHlp_53	+LoadB cia1base+0, %01111111	;c6fd
+		LDA cia1base+1
+		EOR #$ff
+		AND #%00000100
+		BEQ KbdScanHlp_54
+		+smbf 5, r1H
+KbdScanHlp_54	RTS				;c711
+
+KbdScanHelp6	PHA				;c712
+		AND #%01111111
+		CMP #"a"
+		BCC KbdScanHlp_61
+		CMP #"z"+1
+		BCS KbdScanHlp_61
+		PLA
+		+subv $20
+		PHA
+KbdScanHlp_61	PLA				;c722
+		RTS
+
+InitRamTab					;c724
+		!word currentMode
+		!byte 12
+		!byte NULL
+		!byte ST_WR_FORE | ST_WR_BACK
+		!byte NULL
+		!word mousePicData
+		!byte NULL, SC_PIX_HEIGHT-1
+		!word NULL, SC_PIX_WIDTH-1
+		!byte NULL
+		!word appMain
+		!byte 28
+		!word NULL, _InterruptMain
+		!word NULL, NULL, NULL, NULL
+		!word NULL, NULL, NULL, NULL
+		!word _Panic, _RecoverRectangle
+		!byte SelectFlashDelay, NULL
+		!byte ST_FLASH, NULL
+		!word NumTimers
+		!byte 2
+		!byte NULL, NULL
+		!word clkBoxTemp
+		!byte 2
+		!byte NULL, NULL
+		!word obj0Pointer
+		!byte 8
+		!byte $28, $29, $2a, $2b
+		!byte $2c, $2d, $2e, $2f
+		!word NULL
+
+_i_BitmapUp					;c769
+		+PopW returnAddress
+		LDY #1
+		LDA (returnAddress),y
+		STA r0L
+		INY
+		LDA (returnAddress),y
+		STA r0H
+		INY
+		LDA (returnAddress),y
+		STA r1L
+		INY
+		LDA (returnAddress),y
+		STA r1H
+		INY
+		LDA (returnAddress),y
+		STA r2L
+		INY
+		LDA (returnAddress),y
+		STA r2H
+		JSR _BitmapUp
+		PHP
+		LDA #7
+		JMP DoInlineReturn
+
+_i_Rectangle					;c797
+		JSR GetInlineDrwParms
+		JSR _Rectangle
+		PHP
+		LDA #7
+		JMP DoInlineReturn
+
+_i_RecoverRectangle				;c7a3
+		JSR GetInlineDrwParms
+		JSR _RecoverRectangle
+		PHP
+		LDA #7
+		JMP DoInlineReturn
+
+_i_ImprintRectangle				;c7af
+		JSR GetInlineDrwParms
+		JSR _ImprintRectangle
+		PHP
+		LDA #7
+		JMP DoInlineReturn
+
+_i_FrameRectangle				;c7bb
+		JSR GetInlineDrwParms
+		INY
+		LDA (returnAddress),Y
+		JSR _FrameRectangle
+		PHP
+		LDA #8
+		JMP DoInlineReturn
+
+_i_GraphicsString				;c7ca
+		+PopB r0L
+		PLA
+		INC r0L
+		BNE i_GStr0
+		+addv 1
+i_GStr0 	STA r0H 			;c7d5
+		JSR _GraphicsString
+		JMP (r0)
+
+_SetNewMode					;c7dd
+		JSR SetRightMargin
+SetNewMode0	LDA grcntrl1			;c7e0
+		+bbrf 7, graphMode, SNMode_1
+		AND #%01101111
+		STA grcntrl1
+		LDA vdcClrMode
+		JMP SetColorMode
+SNMode_1	ORA #%00010000			;c7f2
+		AND #%01111111
+		STA grcntrl1
+		LDX #26
+		LDA #0
+		JSR VDCPutByte
+		DEX
+		LDA #$80
+		JMP VDCPutByte
+
+SetRightMargin	LDA #0				;c806
+		LDX #>319
+		LDY #<319
+		+bbrf 7, graphMode, SRMargin_1
+		+LoadB E8890, $ff
+		LDA #1
+		LDX #>639
+		LDY #<639
+SRMargin_1	STA clkreg			;c81b
+		STX rightMargin+1
+		STY rightMargin
+		JMP UseSystemFont
+
+_GraphicsString 				;c825
+		JSR Getr0AndInc
+		BEQ GStringEnd
+		TAY
+		DEY
+		LDA GStrTL,Y
+		LDX GStrTH,Y
+		JSR CallRoutine
+		+bra _GraphicsString
+GStringEnd	RTS				;c838
+
+;c84d, c85a, c878, c859, c87e, c884, c896, c8a2, c8be, c89e
+
+						;c839
+GStrTL		!byte <_DoMovePenTo, <_DoLineTo
+		!byte <_DoRectangleTo, <_DoNothing
+		!byte <_DoNewPattern, <_DoESC_PutString
+		!byte <_DoFrame_RecTo, <_DoPenXDelta
+		!byte <_DoPenYDelta, <_DoPenXYDelta
+						;c843
+GStrTH		!byte >_DoMovePenTo, >_DoLineTo
+		!byte >_DoRectangleTo, >_DoNothing
+		!byte >_DoNewPattern, >_DoESC_PutString
+		!byte >_DoFrame_RecTo, >_DoPenXDelta
+		!byte >_DoPenYDelta, >_DoPenXYDelta
+
+_DoMovePenTo					;c84d
+		JSR GetCoords
+		STA GraphPenY
+		STX GraphPenXL
+		STY GraphPenXH
+_DoNothing	RTS
+
+_DoLineTo					;c85a
+		+MoveW GraphPenX, r3
+		+MoveB GraphPenY, r11L
+		JSR _DoMovePenTo
+		STA r11H
+		STX r4L
+		STY r4H
+		SEC
+		LDA #0
+		JMP _DrawLine
+
+_DoRectangleTo					;c878
+		JSR GrStSetCoords
+		JMP _Rectangle
+
+_DoNewPattern					;c87e
+		JSR Getr0AndInc
+		JMP _SetPattern
+
+_DoESC_PutString				;c884
+		JSR Getr0AndInc
+		STA r11L
+		JSR Getr0AndInc
+		STA r11H
+		JSR Getr0AndInc
+		STA r1H
+		JMP _PutString
+
+_DoFrame_RecTo					;c896
+		JSR GrStSetCoords
+		LDA #$FF
+		JMP _FrameRectangle
+
+_DoPenXYDelta					;c89e
+		LDX #1
+		BNE DPXD0
+_DoPenXDelta					;c8a2
+		LDX #0
+DPXD0		LDY #0				;c8a4
+		LDA (r0),Y
+		INY
+		+add GraphPenXL
+		STA GraphPenXL
+		LDA (r0),Y
+		INY
+		ADC GraphPenXH
+		STA GraphPenXH
+		+beqx DPYD1
+		BNE DPYD0
+_DoPenYDelta					;c8be
+		LDY #0
+DPYD0		LDA (r0),Y			;c8c0
+		INY
+		+add GraphPenY
+		STA GraphPenY
+		INY
+DPYD1		TYA				;c8cb
+		+add r0L
+		STA r0L
+		BCC DPYD2
+		INC r0H
+DPYD2		RTS				;c8d5
+
+GetCoords	JSR Getr0AndInc 		;c8d6
+		TAX
+		JSR Getr0AndInc
+		STA r2L
+		JSR Getr0AndInc
+		LDY r2L
+		RTS
+
+Getr0AndInc	LDY #0				;c8e5
+		LDA (r0),Y
+		INC r0L
+		BNE Gr0AI0
+		INC r0H
+Gr0AI0		CMP #0				;c8ef
+		RTS
+
+_i_PutString	+PopB r0L			;c8f2
+		PLA
+		INC r0L
+		BNE iPutSt1
+		+addv 1
+iPutSt1 	STA r0H 			;c8fd
+		LDY #0
+		LDA (r0),y
+		INC r0L
+		BNE *+4
+		INC r0H
+		STA r11L
+		LDA (r0),y
+		INC r0L
+		BNE *+4
+		INC r0H
+		STA r11H
+		LDA (r0),y
+		INC r0L
+		BNE *+4
+		INC r0H
+		STA r1H
+		JSR _PutString
+		INC r0L
+		BNE *+4
+		INC r0H
+		JMP (r0)
+
+ClrScr						;c92b
+		+LoadB dispBufferOn, ST_WR_FORE | ST_WR_BACK
+		+bbsf 7, graphMode, ClrScr80
+		+LoadB r0L, 0
+		STA r1L
+		+LoadB r0H, >SCREEN_BASE
+		+LoadB r1H, >BACK_SCR_BASE
+		LDX #$7D
+ClrScr1 	LDY #$3F			;c943
+ClrScr2 	LDA #backPattern1		;c945
+		STA (r0),Y
+		STA (r1),Y
+		DEY
+		LDA #backPattern2
+		STA (r0),Y
+		STA (r1),Y
+		DEY
+		BPL ClrScr2
+		+AddVB 64, r0L
+		STA r1L
+		BCC ClrScr3
+		INC r0H
+		INC r1H
+ClrScr3		DEX				;c964
+		BNE ClrScr1
+		RTS
+
+ClrScr80	LDA #2				;c968
+		JSR SetPattern
+		JSR i_Rectangle
+		!byte 0, 199
+		!word 0, 639
+		RTS
+_i_FillRam					;c977
+		+PopW returnAddress
+		JSR GetMDataDatas
+		JSR _FillRam
+		PHP
+		LDA #6
+		JMP DoInlineReturn
+
+						;c989
+BitMask2	!byte $01, $02, $04, $08, $10, $20, $40, $80
+
+InitMsePic					;c991
+		!byte %######.., %........, %........
+		!byte %#####..., %........, %........
+		!byte %####...., %........, %........
+		!byte %#####..., %........, %........
+		!byte %##.###.., %........, %........
+		!byte %#...###., %........, %........
+		!byte %.....###, %........, %........
+		!byte %......##, %........, %........
+
+VIC_IniTbl					;c9a9
+		!byte $00, $00, $00, $00, $00, $00, $00, $00
+		!byte $00, $00, $00, $00, $00, $00, $00, $00
+		!byte $00, $3B, $FB, $AA, $AA, $01, $08, $00
+		!byte $38, $0F, $01, $00, $00, $00
+
+_EnterDT_Str0					;c9c7
+		!text BOLDON, "Please insert a disk with the", NULL
+_EnterDT_Str1					;c9e6
+		!text "128 DESKTOP V2.0 or higher", NULL
+
+DeskTopName	!text "128 DESKTOP", NULL	;ca01
+
+_DShiftLeft					;ca0d
+		DEY
+		BMI DShLf0
+		ASL zpage,X
+		ROL zpage+1,X
+		JMP _DShiftLeft
+DShLf0		RTS				;ca17
+
+_DShiftRight					;ca18
+		DEY
+		BMI DShRg0
+		LSR zpage+1,X
+		ROR zpage,X
+		JMP _DShiftRight
+DShRg0		RTS				;ca22
+
+_Dabs						;ca23
+		LDA zpage+1,X
+		BMI _Dnegate
+		RTS
+_Dnegate	LDA zpage+1,X			;ca28
+		EOR #$FF
+		STA zpage+1,X
+		LDA zpage,X
+		EOR #$FF
+		STA zpage,X
+		INC zpage,X
+		BNE Dnegate1
+		INC zpage+1,X
+Dnegate1	RTS				;ca3a
+
+_Ddec						;ca3b
+		LDA zpage,X
+		BNE Ddecl0
+		DEC zpage+1,X
+Ddecl0		DEC zpage,X			;ca41
+		LDA zpage,X
+		ORA zpage+1,X
+		RTS
+
+;!!!strange calls under I/O space with offset in A (change to labels)!!!
+_IsMseInRegion	LDA #0				;ca48
+		!byte $2c
+__MoveData	LDA #3				;ca4b
+		!byte $2c
+_CRC		LDA #6   			;ca4e
+		!byte $2c
+_GetRandom	LDA #9				;ca51
+		!byte $2c
+_BBMult		LDA #$0c			;ca54
+		!byte $2c
+_BMult		LDA #$0f			;ca57
+		!byte $2c
+_DMult		LDA #$12			;ca5a
+		!byte $2c
+_Ddiv		LDA #$15			;ca5d
+		!byte $2c
+_DSdiv		LDA #$18			;ca60
+		!byte $2c
+_ProcessDelays	LDA #$1b			;ca63
+		!byte $2c
+GetInlineDrwParms	LDA #$1e			;ca66
+		!byte $2c
+GrStSetCoords	LDA #$21			;ca69
+		!byte $2c
+_ProcessTimers	LDA #$24			;ca6c
+		STA IOJump+1
+		+MoveB config, IOConfSave+1
+		ORA #%00000001
+		STA config
+IOJump		JSR $D000			;ca7c
+		PHP
+		PHA
+IOConfSave	LDA #$7e			;ca82
+		STA config
+		PLA
+		PLP
+		RTS
+		
+VDCPutByte	STX vdcreg			;ca89
+VDCPutData	BIT vdcreg			;ca8c
+		BPL VDCPutData
+		STA vdcdata
+		RTS
+
+VDCGetByte	STX vdcreg			;ca95
+VDCGetData	BIT vdcreg			;ca98
+		BPL VDCGetData
+		LDA vdcdata
+		RTS
+
+_CopyString					;caa1
+		LDA #0
+_CopyFString	STX CSSource			;caa3
+		STY CSDest
+		TAX
+		LDY #0
+CSSource	= *+1
+CStril0 	LDA (zpage),Y			;caac
+CSDest		= *+1
+		STA (zpage),Y
+		BNE CStril1
+		+beqx CStril2
+CStril1 	INY				;cab5
+		BEQ CStril2
+		+beqx CStril0
+		DEX
+		BNE CStril0
+CStril2 	RTS				;cabe
+
+_i_MoveData					;cabf
+		+PopW returnAddress
+		JSR GetMDataDatas
+		INY
+		LDA (returnAddress),Y
+		STA r2H
+		JSR _MoveData
+		PHP
+		LDA #7
+		JMP DoInlineReturn
+
+GetMDataDatas					;cad6
+		LDY #1
+		LDA (returnAddress),Y
+		STA r0L
+		INY
+		LDA (returnAddress),Y
+		STA r0H
+		INY
+		LDA (returnAddress),Y
+		STA r1L
+		INY
+		LDA (returnAddress),Y
+		STA r1H
+		INY
+		LDA (returnAddress),Y
+		STA r2L
+		RTS
+
+_MoveData					;caf1
+		LDA r2L
+		ORA r2H
+		BEQ MData_3
+		+PushW r0
+		+PushB r1H
+		+PushB r2H
+		+PushB r3L
+		LDA sysRAMFlg
+		BPL MData_1
+		+CmpBI r2H, $38
+		BEQ MData_0
+		BCS MData_1
+MData_0		+CmpBI r0H, $02			;cb13
+		BCC MData_1
+		+CmpBI r1H, $02
+		BCC MData_1
+		PHA
+		+LoadB r1H, 0
+		STA r3L
+		JSR StashRAM
+		+PopB r0H
+		+MoveB r1L, r0L
+		JSR FetchRAM
+		+bra MData_2
+MData_1		JSR __MoveData			;cb36
+MData_2		+PopB r3L			;cb39
+		+PopB r2H
+		+PopB r1H
+		+PopW r0
+MData_3		RTS				;cb48
+
+ _CmpString					;cb49
+		LDA #0
+_CmpFString	STX CMSSource			;cb4b
+		STY CMSDest
+		TAX
+		LDY #0
+CMSSource	= *+1
+CMStrl0 	LDA (zpage),Y			;cb54
+CMSDest 	= *+1
+		CMP (zpage),Y
+		BNE CMStrl2
+		CMP #0
+		BNE CMStrl1
+		+beqx CMStrl2
+CMStrl1 	INY				;cb61
+		BEQ CMStrl2
+		+beqx CMStrl0
+		DEX
+		BNE CMStrl0
+		LDA #0
+CMStrl2 	RTS				;cb6c
+
+_Panic						;cb6d
+		PLA
+		PLA
+		PLA
+		PLA
+		PLA
+		PLA
+		PLA
+		PLA
+		+PopW r0
+		LDX #r0
+		JSR Ddec
+		LDX #r0
+		JSR Ddec
+		LDA r0H
+		LDX #0
+		JSR Panil0
+		LDA r0L
+		JSR Panil0
+;		+LoadW r0, _PanicDB_DT
+		LDA #>_PanicDB_DT
+		STA r0H
+		LDA #<_PanicDB_DT
+		STA r0L
+		JSR DoDlgBox
+Panil0		PHA				;cb9c
+		LSR
+		LSR
+		LSR
+		LSR
+		JSR Panil1
+		INX
+		PLA
+		AND #%00001111
+		JSR Panil1
+		INX
+		RTS
+Panil1		CMP #10 			;cbad
+		BCS Panil2
+		+addv ("0")
+		BNE Panil3
+Panil2		+addv ("0"+7)			;cbb6
+Panil3		STA _PanicAddy,X		;cbb9
+		RTS
+
+_PanicDB_Str					;cbbd
+		!byte BOLDON
+		!text "System error near $"
+_PanicAddy	!text "xxxx"			;cbd1
+		!byte NULL
+
+_PanicDB_DT					;cbd6
+		!byte DEF_DB_POS | 1
+		!byte DBTXTSTR, TXT_LN_X, TXT_LN_1_Y
+		!word _PanicDB_Str
+		!byte NULL
+
+_GetSerialNumber				;cbdd
+		+MoveB SerialNumber, r0L	;!!!hint+MoveW SerialNumber, r0
+GSN_hb		+MoveB SerialNumber+1, r0H	;cbe2
+		rts
+
+_DrawSprite					;cbe8
+		LDY r3L
+		LDA SprTabL,Y
+		STA r5L
+		LDA SprTabH,Y
+		STA r5H
+		LDY #63
+DSpr0		LDA (r4),Y			;cbf6
+		STA (r5),Y
+		DEY
+		BPL DSpr0
+		RTS
+
+;cbfe
+SprTabL 	!byte <spr0pic, <spr1pic, <spr2pic, <spr3pic
+		!byte <spr4pic, <spr5pic, <spr6pic, <spr7pic
+;cc06
+SprTabH 	!byte >spr0pic, >spr1pic, >spr2pic, >spr3pic
+		!byte >spr4pic, >spr5pic, >spr6pic, >spr7pic
+
+_PosSprite					;cc0e
+		LDX #10
+		JSR NormalizeX
+		LDA r3L
+		ASL
+		TAY
+		LDA r5L
+		+addv VIC_Y_POS_OFF
+		STA mob0ypos,Y
+		+bbrf 7, graphMode, PSpr0
+		LDA r4H
+		STA E887E,Y
+		LSR
+		STA r4H
+		LDA r4L
+		STA E887D,Y
+		ROR
+		STA r4L
+PSpr0		LDA r4L				;cc33
+		+addv VIC_X_POS_OFF
+		STA r6L
+		LDA r4H
+		ADC #0
+		STA r6H
+		LDA r6L
+		STA mob0xpos,Y
+		LDX r3L
+		LDA BitMask2,X
+		EOR #$FF
+		AND msbxpos
+		TAY
+		LDA #1
+		AND r6H
+		BEQ PSpr1
+		TYA
+		ORA BitMask2,X
+		TAY
+PSpr1		STY msbxpos			;cc5b
+		RTS
+
+_EnablSprite					;cc5f
+		LDX r3L
+		LDA BitMask2,X
+		TAX				;!!!hint!!!
+		TXA
+		ORA mobenble
+		STA mobenble
+		RTS
+
+_DisablSprite					;cc6d
+		LDX r3L
+		LDA BitMask2,X
+		EOR #$FF
+		PHA      			;!!!hint!!!
+		PLA
+		AND mobenble
+		STA mobenble
+		RTS
+
+_RestartProcess 				;cc7d
+		LDA TimersCMDs,X
+		AND #(SET_BLOCKED | SET_FROZEN) XOR $ff
+		STA TimersCMDs,X
+RProc0		TXA				;cc85
+		PHA
+		ASL
+		TAX
+		LDA TimersVals,X
+		STA TimersTab,X
+		LDA TimersVals+1,X
+		STA TimersTab+1,X
+		PLA
+		TAX
+		RTS
+
+_EnableProcess					;cc98
+		LDA TimersCMDs,X
+		ORA #SET_RUNABLE
+EnProc0 	STA TimersCMDs,X		;cc9d
+		RTS
+_BlockProcess					;cca1
+		LDA TimersCMDs,X
+		ORA #SET_BLOCKED
+		+bra EnProc0
+_UnBlockProcess 				;cca9
+		LDA TimersCMDs,X
+		AND #SET_BLOCKED XOR $ff
+		+bra EnProc0
+_FreezeProcess					;ccb1
+		LDA TimersCMDs,X
+		ORA #SET_FROZEN
+		+bra EnProc0
+_UnFreezeProcess				;ccb9
+		LDA TimersCMDs,X
+		AND #SET_FROZEN XOR $ff
+		+bra EnProc0
+
+_DoCheckDelays
+		LDX DelaySP			;ccc1
+		BEQ DChDl2
+		DEX
+DChDl0		LDA DelayValL,X 		;cc29
+		ORA DelayValH,X
+		BNE DChDl1
+		LDA DelayRtnsH,X
+		STA r0H
+		LDA DelayRtnsL,X
+		STA r0L
+		TXA
+		PHA
+		JSR _RemoveDelay
+		JSR _DoExecDelay
+		PLA
+		TAX
+DChDl1		DEX				;cc45
+		BPL DChDl0
+DChDl2		RTS				;cc48
+
+_DoExecDelay					;cce7
+		INC r0L
+		BNE DEDe0
+		INC r0H
+DEDe0		JMP (r0)			;cced
+
+_RemoveDelay					;ccf0
+		PHP
+		SEI
+RDel0		INX				;ccf2
+		CPX DelaySP
+		BEQ RDel1
+		LDA DelayValL,X
+		STA DelayValL-1,X
+		LDA DelayValH,X
+		STA DelayValH-1,X
+		LDA DelayRtnsL,X
+		STA DelayRtnsL-1,X
+		LDA DelayRtnsH,X
+		STA DelayRtnsH-1,X
+		+bra RDel0
+RDel1		DEC DelaySP			;cd13
+		PLP
+		RTS
+
+_Sleep		PHP				;cd18
+		PLA
+		TAY
+		SEI
+		LDX DelaySP
+		LDA r0L
+		STA DelayValL,X
+		LDA r0H
+		STA DelayValH,X
+		PLA
+		STA DelayRtnsL,X
+		PLA
+		STA DelayRtnsH,X
+		INC DelaySP
+		TYA
+		PHA
+		PLP
+		RTS
+
+_InitProcesses					;cd38
+		LDX #0
+		STX NumTimers
+		STA r1L
+		STA r1H
+		TAX
+		LDA #SET_FROZEN
+IProc0		STA TimersCMDs-1,X		;cd44
+		DEX
+		BNE IProc0
+		LDY #0
+IProc1		LDA (r0),Y			;cd4c
+		STA TimersRtns,X
+		INY
+		LDA (r0),Y
+		STA TimersRtns+1,X
+		INY
+		LDA (r0),Y
+		STA TimersVals,X
+		INY
+		LDA (r0),Y
+		STA TimersVals+1,X
+		INY
+		INX
+		INX
+		DEC r1H
+		BNE IProc1
+		+MoveB r1L, NumTimers
+		RTS
+
+_ExecuteProcesses
+		LDX NumTimers			;cd70
+		BEQ EProc2
+		DEX
+EProc0		LDA TimersCMDs,X		;cd76
+		BPL EProc1
+		AND #SET_BLOCKED
+		BNE EProc1
+		LDA TimersCMDs,X
+		AND #SET_RUNABLE XOR $ff
+		STA TimersCMDs,X
+		TXA
+		PHA
+		ASL
+		TAX
+		LDA TimersRtns,X
+		STA r0L
+		LDA TimersRtns+1,X
+		STA r0H
+		JSR _DoExecProcess
+		PLA
+		TAX
+EProc1		DEX				;cd9a
+		BPL EProc0
+EProc2		RTS				;cd9d
+_DoExecProcess
+		JMP (r0)
+
+_DoUpdateTime					;cda1
+		SEI
+		LDA cia1base+15
+		AND #%01111111
+		STA cia1base+15
+		LDA hour
+		CMP #12
+		BMI DoUpdTime1
+		+bbsf 7, cia1base+11, DoUpdTime1
+		JSR DateUpdate
+DoUpdTime1	LDA cia1base+11 		;cdb9
+		AND #%00011111
+		CMP #$12
+		BNE DoUpdTime2
+		LDA #0
+DoUpdTime2	+bbrf 7, cia1base+11, DoUpdTime3	;cdc4
+		SED
+		+addv $12
+		CLD
+DoUpdTime3	JSR ConvertBCD			;cdce
+		STA hour
+		LDA cia1base+10
+		JSR ConvertBCD
+		STA minutes
+		LDA cia1base+9
+		JSR ConvertBCD
+		STA seconds
+		LDA cia1base+8
+		LDY #2
+DoUpdTime4	LDA year,y			;cdeb
+		STA dateCopy,y
+		DEY
+		BPL DoUpdTime4
+		+MoveB cia1base+13, r1L
+		+bbrf 7, alarmSetFlag, DoUpdTime5
+		AND #ALARMMASK
+		BEQ DoUpdTime6
+		LDA #$4a
+		STA alarmSetFlag
+		LDA alarmTmtVector
+		ORA alarmTmtVector+1
+		BEQ DoUpdTime5
+		JMP (alarmTmtVector)
+DoUpdTime5	+bbrf 6, alarmSetFlag, DoUpdTime6	;ce12
+		JSR DoClockAlarm
+DoUpdTime6	CLI				;ce1a
+		RTS
+
+DateUpdate	JSR CheckMonth			;ce1c
+		CMP day
+		BEQ DateUpd1
+		INC day
+		RTS
+DateUpd1	LDY #1				;ce28
+		STY day
+		INC month
+		LDA month
+		CMP #13
+		BNE DateUpd2
+		STY month
+		INC year
+		LDA year
+		CMP #100
+		BNE DateUpd2
+		DEY
+		STY year
+DateUpd2	RTS				;ce48
+
+CheckMonth	LDY month			;ce49
+		LDA daysTab-1, y
+		CPY #2
+		BNE CheckMonth2
+		TAY
+		LDA year
+		AND #3
+		BNE CheckMonth1
+		INY
+CheckMonth1	TYA				;ce5c
+CheckMonth2	RTS				;ce5d
+
+daysTab 					;ce5e
+		!byte 31, 28, 31, 30, 31, 30
+		!byte 31, 31, 30, 31, 30, 31
+
+ConvertBCD	PHA				;ce6a
+		AND #%11110000
+		LSR
+		LSR
+		LSR
+		LSR
+		TAY
+		PLA
+		AND #%00001111
+		CLC
+CvtBCD1 	DEY				;ce76
+		BMI CvtBCD2
+		ADC #10
+		BNE CvtBCD1
+CvtBCD2 	RTS				;ce7d
+
+DoClockAlarm	LDA alarmWarnFlag		;ce7e
+		BNE DoClkAlrm3
+		LDY config
+		+LoadB config, CIOIN
+		LDX #24
+DoClkAlrm1	LDA pingTab,x			;ce8d
+		STA sidbase,x
+		DEX
+		BPL DoClkAlrm1
+		LDX #$21
+		LDA alarmSetFlag
+		AND #%00111111
+		BNE DoClkAlrm2
+		TAX
+DoClkAlrm2	STX sidbase+4			;cea0
+		STY config
+		LDA #$1e
+		STA alarmWarnFlag
+		DEC alarmSetFlag
+DoClkAlrm3	RTS				;ceae
+
+pingTab 					;ceaf
+		!byte $00, $10, $00, $08, $40, $08, $00, $00
+		!byte $00, $00, $00, $00, $00, $00, $00, $00
+		!byte $00, $00, $00, $00, $00, $00, $00, $00
+		!byte $0f
+
+DlgBoxProcL					;cec8
+		!byte <DBDoIcons, <DBDoIcons
+		!byte <DBDoIcons, <DBDoIcons
+		!byte <DBDoIcons, <DBDoIcons
+		!byte <DBDoIcons, <DBDoIcons ; not used
+		!byte <DBDoIcons, <DBDoIcons ; not used
+		!byte <DBDoTXTSTR, <DBDoVARSTR
+		!byte <DBDoGETSTR, <DBDoSYSOPV
+		!byte <DBDoGRPHSTR, <DBDoGETFILES
+		!byte <DBDoOPVEC,   <DBDoUSRICON
+		!byte <DBDoUSR_ROUT
+DlgBoxProcH					;cedb
+		!byte >DBDoIcons, >DBDoIcons
+		!byte >DBDoIcons, >DBDoIcons
+		!byte >DBDoIcons, >DBDoIcons
+		!byte <DBDoIcons, <DBDoIcons ; not used
+		!byte <DBDoIcons, <DBDoIcons ; not used
+		!byte >DBDoTXTSTR, >DBDoVARSTR
+		!byte >DBDoGETSTR, >DBDoSYSOPV
+		!byte >DBDoGRPHSTR, >DBDoGETFILES
+		!byte >DBDoOPVEC,   >DBDoUSRICON
+		!byte >DBDoUSR_ROUT
+
+;!!!junk		
+		!byte $ef, $fe
+
+;PatternTab	= $cef0				; 8*32 patterns here

@@ -1,0 +1,48 @@
+
+;GEOS Kernal makefile
+;by Maciej 'YTM/Elysium' Witkowiak
+;19,20-3-99; 20-4; 6-6; 17-8
+;27.07.2000, 1.8
+
+;This is makefile for GEOS KERNAL
+
+!to "kernal.bin"
+!cpu 6502
+
+;all GEOS Kernal equations...
+!source "inc/const.inc"
+!source "inc/geossym.inc"
+!source "inc/printdrv.inc"
+!source "inc/geosmac.inc"
+!source "inc/kernal.inc"
+!source "inc/diskdrv.inc"
+
+;rules for compiling
+;!source "inc/equ.inc"
+
+		    *=$9d80
+!source "src/lokernal.tas"
+
+		    *=$bff0
+;bf40 - some junk here?
+		!byte $49, $00, $fc, $b8, $01, $20, $c4, $1a
+		!byte $00, $00, $bc, $b8, $03, $04, $70, $08
+
+		    *=OS_ROM
+!source "src/kernal1-1.tas"
+!source "src/c100jmp.tas"
+!source "src/kernal1-2.tas"
+;--------------------------------------------
+PatternTab	!binary "bin/patterns.bin"	    ;cef0
+;cff0 - two remaining patterns...
+		!byte $b1, $30, $03, $1b, $d8, $c0, $0c, $8d
+		!byte $80, $10, $02, $20, $01, $08, $40, $04
+;--------------------------------------------
+;kernal under I/O, partially, rest is printer driver backup and fileHeader backup (bank0?)
+!source "src/kernal2.tas"
+;--------------------------------------------
+		    *=$e000
+!source "src/e000jmp.tas"
+!source "src/kernal3.tas"
+!source "src/kernal4.tas"
+!source "src/kernal5.tas"

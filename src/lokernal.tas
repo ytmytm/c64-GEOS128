@@ -1,0 +1,230 @@
+
+		;*=$9d80
+
+RegisterJMP	JMP _RegisterJMP		;9d80 !!!hint!!!
+_MainLoop	JMP _MainLoop_2			;9d83 !!!hint!!!
+
+_RegisterJMP	STA regJMP+1			;9d86
+		+MoveB mmu+6, regJMPMMU+1
+		AND #%11110000
+		STA mmu+6
+		JSR regJMP
+regJMPMMU	LDX #0				;9d97
+		STX mmu+6
+		RTS
+regJMP		JMP ($0000)			;9d9d
+
+
+ExecCBMKernal					;9da0
+		STA krnlSaveA
+		+PopW krnlJSR+1
+		SEC				;!!!hint? +SubVW 2, krlnJSR+1
+		LDA krnlJSR+1
+		SBC #2
+		STA krnlJSR+1
+		LDA krnlJSR+2
+		SBC #0
+		STA krnlJSR+2
+		+MoveB config, krnlSaveConfig
+		+LoadB config, CKRNLIOIN
+		+MoveB mmu+6, krnlSaveMMU
+		AND #%11110000
+		ORA #%00000101
+		STA mmu+6
+		LDA krnlSaveA
+krnlJSR		JSR $ff8a			;9dd7
+		PHP
+		PHA
+		+MoveB krnlSaveMMU, mmu+6
+		+MoveB krnlSaveConfig, config
+		PLA
+		PLP
+		RTS
+
+GoThroughBank0					;9deb
+		STA bank0SaveA
+		PHP
+		+PopB bank0SavePS
+		PLA
+		+subv 2
+		STA bank0JMP+1
+		+PopB bank0JMP+2
+		+MoveB mmu+6, bank0SaveMMU
+		AND #%11110000
+		ORA #%00001011
+		STA mmu+6
+		+PushB bank0SavePS
+		LDA bank0SaveA
+		PLP
+bank0JMP	JSR $e000			;9e13
+		PHP
+		PHA
+		+MoveB bank0SaveMMU, mmu+6
+		PLA
+		PLP
+		RTS
+
+DkNmTab						;9e21
+		!byte <DrACurDkNm, <DrBCurDkNm
+		!byte <DrCCurDkNm, <DrDCurDkNm
+		!byte >DrACurDkNm, >DrBCurDkNm
+		!byte >DrCCurDkNm, >DrDCurDkNm
+
+LoKernal	+AddVW 2, r6			;9e29
+LoKernEnd	RTS
+
+_ReadFile					;9e35
+		JSR EnterTurbo
+		+bnex LoKernEnd
+		JSR InitForIO
+		+PushW r0
+		+LoadW r4, diskBlkBuf
+		+LoadB r5L, 2
+		+MoveW r1, fileTrScTab+2
+RdFile1 	JSR ReadBlock			;9e5a
+		+bnex RdFile6
+		LDY #$fe
+		LDA diskBlkBuf
+		BNE RdFile2
+		LDY diskBlkBuf+1
+		DEY
+		BEQ RdFile5
+RdFile2 	LDA r2H 			;9e6d
+		BNE RdFile3
+		CPY r2L
+		BCC RdFile3
+		BEQ RdFile3
+		LDX #BFR_OVERFLOW
+		BNE RdFile6
+RdFile3 	STY r1L 			;9e7b
+		+LoadB config, CRAM64K
+RdFile4 	LDA diskBlkBuf+1,y		;9dd8
+		DEY
+		STA (r7),y
+		BNE RdFile4
+		+LoadB config, CIOIN
+		+AddB r1L, r7L
+		BCC *+4
+		INC r7H
+		+SubB r1L, r2L
+		BCS *+4
+		DEC r2H
+RdFile5 	INC r5L 			;9ea5
+		INC r5L
+		LDY r5L
+		+MoveB diskBlkBuf+1, r1H
+		STA fileTrScTab+1,y
+		+MoveB diskBlkBuf, r1L
+		STA fileTrScTab,y
+		BNE RdFile1
+		LDX #0
+RdFile6 	+PopW r0			;9ebf
+		JMP DoneWithIO
+
+FlaggedPutBlock LDA verifyFlag			;9ec8
+		BEQ FlggdPutBl1
+		JMP VerWriteBlock
+FlggdPutBl1	JMP WriteBlock			;9ed0
+
+_WriteFile	JSR EnterTurbo			;9ed3
+		+bnex WrFile2
+		STA verifyFlag
+		JSR InitForIO
+		+LoadW r4, diskBlkBuf
+		+PushW r6
+		+PushW r7
+		JSR DoWriteFile
+		+PopW r7
+		+PopW r6
+		+bnex WrFile1
+		DEC verifyFlag
+		JSR DoWriteFile
+WrFile1 	JSR DoneWithIO			;9f0b !!!hint!!!jmp DoneWithIO
+WrFile2		RTS				;9f0e
+
+DoWriteFile	LDY #0				;9f0f
+		LDA (r6),y
+		BEQ DoWrFile2
+		STA r1L
+		INY
+		LDA (r6),y
+		STA r1H
+		DEY
+		JSR LoKernal
+		LDA (r6),y
+		STA (r4),y
+		INY
+		LDA (r6),y
+		STA (r4),y
+		LDY #$fe
+		+LoadB config, CRAM64K
+DoWrFile1	DEY				;9e64
+		LDA (r7),y
+		STA diskBlkBuf+2,y
+		TYA
+		BNE DoWrFile1
+		+LoadB config, CIOIN
+		JSR FlaggedPutBlock
+		+bnex DoWrFile3
+		+AddVW $fe, r7
+		+bra DoWriteFile
+DoWrFile2	TAX				;9f52
+DoWrFile3	RTS				;9f53
+
+SerialNumber	!word $1cd5			;9f54
+registeredFlag	!byte $ff			;9f56
+
+_VerifyRAM	LDY #$93			;9f
+		BNE _DoRAMOp
+_StashRAM	LDY #$90			;9f
+		BNE _DoRAMOp
+_SwapRAM	LDY #$92			;9f
+		BNE _DoRAMOp
+_FetchRAM	LDY #$91			;9f
+_DoRAMOp	LDX #DEV_NOT_FOUND		;9f65
+		LDA r3L
+		CMP ramExpSize
+		BCS DRAMOp2
+		LDX clkreg
+		+LoadB clkreg, NULL
+		+MoveW r0, EXP_BASE+2
+		+MoveW r1, EXP_BASE+4
+		+MoveB r3L, EXP_BASE+6
+		+MoveW r2, EXP_BASE+7
+		LDA #0
+		STA EXP_BASE+9
+		STA EXP_BASE+10
+		STY EXP_BASE+1
+DRAMOp1 	LDA EXP_BASE			;9fa4
+		AND #%01100000
+		BEQ DRAMOp1
+		STX clkreg
+		LDX #0
+DRAMOp2 	RTS				;9fb0
+
+vdcRegTab					;9fb1
+		!byte $7e, $50, $63, $49, $ff, $e0, $ff, $1d
+		!byte $fc, $ff, $a0, $e7, $00, $00, $00, $00
+		!byte $ff, $ff, $ff, $ff, $ff, $ff, $78, $e8
+		!byte $ff, $ff, $ff, $00, $ff, $f8, $ff, $ff
+		!byte $ff, $ff, $7d, $64, $ff
+
+SetBufTSVector	+LoadW r6, fileTrScTab		;9fd6
+		RTS
+
+GetStartHAddy					;9fdf
+		+MoveW fileHeader + O_GHST_ADDR, r7
+		RTS
+
+SetFHeadVector	+LoadW r4, fileHeader		;9fea
+		RTS
+
+_InterruptMain					;9ff3
+		JSR _ProcessTimers
+		JSR _ProcessDelays
+		JSR ProcessCursor
+		JMP _GetRandom
+
+		;!byte $00
+		;$a000 here
+

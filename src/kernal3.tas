@@ -1,0 +1,1726 @@
+
+		;*=$e000
+;jumptable is in bank0, export _Lables...
+;		!for Count, 40 {
+;		JSR GoThroughBank0
+;		}
+
+_GetString					;e078
+		LDX #$18
+		JSR NormalizeX
+		+MoveW r0, string
+		+MoveB r1L, stringMargCtrl
+		+MoveB r1H, stringY
+		+MoveB r2L, stringMaxLen
+		+PushB r1H
+		CLC				;!!!macro!!!
+		LDA baselineOffset
+		ADC r1H
+		STA r1H
+		JSR _PutString
+		+PopB r1H
+		SEC
+		LDA r0L
+		SBC string
+		STA stringLen
+		+MoveW r11, stringX
+		+MoveW keyVector, tmpKeyVector
+		LDA #>GSSkeyVector
+		STA keyVector+1
+		LDA #<GSSkeyVector
+		STA keyVector
+		LDA #>GSStringFault
+		STA StringFaultVec+1
+		LDA #<GSStringFault
+		STA StringFaultVec
+		+bbrf 7, stringMargCtrl, GetStr1
+		+MoveW r4, StringFaultVec
+GetStr1 	LDA curHeight			;e0e5
+		JSR _InitTextPrompt
+		JMP PromptOn
+
+GSStringFault	+MoveB stringLen, stringMaxLen	;e0ed
+		DEC stringLen
+GSStrFltEnd	RTS				;e0f6
+
+ProcessCursor	LDA alphaFlag			;e0f7
+		BPL ProcCur2
+		DEC alphaFlag
+		LDA alphaFlag
+		AND #$3f
+		BNE ProcCur2			;!!!hint!!! BNE GSStrFltEnd
+		+bbrf 6, alphaFlag, ProcCur1
+		JMP _PromptOff
+ProcCur1	JMP _PromptOn			;e10e
+ProcCur2	RTS				;e111
+
+GSSkeyVector					;e112
+		JSR _PromptOff
+		+MoveW stringX, r11
+		+MoveB stringY, r1H
+		LDY stringLen
+		LDA keyData
+		BPL GSSkeyVec2
+GSSkeyVec1	RTS				;e12c
+GSSkeyVec2	CMP #CR 			;e12d
+ 		BEQ GSSkeyVec5
+		CMP #BACKSPACE
+		BEQ GSSkeyVec3
+		CMP #KEY_DELETE
+		BEQ GSSkeyVec3
+		CMP #KEY_INSERT
+		BEQ GSSkeyVec3
+		CMP #KEY_RIGHT
+		BEQ GSSkeyVec3
+		CMP #" "
+		BCC GSSkeyVec1
+		CPY stringMaxLen
+		BEQ GSSkeyVec4
+		STA (string),y
+		+PushB dispBufferOn
+		+bbrf 5, dispBufferOn, GSSkeyVec21
+		+LoadB dispBufferOn, (ST_WR_FORE | ST_WRGS_FORE)
+GSSkeyVec21	+PushB r1H			;e159
+		CLC				;!!!macro!!!
+		LDA baselineOffset
+		ADC r1H
+		STA r1H
+		LDA (string),y
+		JSR _PutChar
+		+PopB r1H
+		+PopB dispBufferOn
+		INC stringLen
+		LDX r11H
+		STX stringX+1
+		LDX r11L
+		STX stringX
+		+bra GSSkeyVec4
+GSSkeyVec3	JSR GSHelp1			;e17e
+ 		+bra GSSkeyVec4
+GSSkeyVec4	JMP _PromptOn			;e184
+GSSkeyVec5	PHP				;e187
+		SEI
+		JSR _PromptOff
+		LDA #%01111111
+		AND alphaFlag
+		STA alphaFlag
+		PLP
+		LDA #0
+		STA (string),y
+		+MoveW tmpKeyVector, r0
+		LDA #0				;!!!macro!!!
+		STA keyVector
+		STA keyVector+1
+		STA StringFaultVec
+		STA StringFaultVec+1
+		LDX stringLen
+		JMP (r0)
+
+GSHelp1 	CPY #0				;e1b7
+		BEQ GSHelp12
+		DEY
+		STY stringLen
+		+PushB dispBufferOn
+		+bbrf 5, dispBufferOn, GSHelp11
+		+LoadB dispBufferOn, (ST_WR_FORE | ST_WRGS_FORE)
+GSHelp11	+PushB r1H			;e1cc
+		CLC
+		LDA baselineOffset
+		ADC r1H
+		STA r1H
+		LDA (string),y
+		JSR DoBACKSPC
+		+PopB r1H
+		LDY stringLen
+		+PopB dispBufferOn
+		LDX r11H
+		STX stringX+1
+		LDX r11L
+		STX stringX
+		CLC
+		RTS
+GSHelp12	SEC				;e1f0
+		RTS
+
+_PutChar					;e1f2
+		PHA
+		LDX #$18
+		JSR NormalizeX
+		PLA
+		CMP #$20
+		BCS PutChar1
+		TAY
+		LDA PutCharTabL-8,y
+		LDX PutCharTabH-8,y
+		JMP CallRoutine
+PutChar1	PHA				;e207
+		LDY r11H
+		STY r13H
+		LDY r11L
+		STY r13L
+		LDX currentMode
+		JSR _GetRealSize
+		DEY
+		TYA
+		+add r13L
+		STA r13L
+		BCC *+4
+		INC r13H
+		LDX #$37			;e220
+		JSR NormalizeX
+		+CmpW rightMargin, r13
+		BCC PutChar4
+		LDX #$35
+		JSR NormalizeX
+		+CmpW leftMargin, r11
+		BEQ PutChar2
+		BCS PutChar3
+PutChar2	PLA				;e22f
+		+subv $20
+		JMP Font_10
+PutChar3	LDA r13L			;e24b
+		+addv 1
+		STA r11L
+		LDA r13H
+		ADC #0
+		STA r11H
+PutChar4	PLA				;e258
+		LDX StringFaultVec+1
+		LDA StringFaultVec
+		JMP CallRoutine
+
+;e334, e290, e29c, e2a4, e2ad, e2b5, e2c0, e2c7
+;e352, c3ec, e2ce, e2d5, e2dc, e2f3, e300, e306
+;e312, e319, e320, e327
+
+PutCharTabL	!byte <DoBACKSPACE, <DoTAB	;e562
+		!byte <DoLF, <DoHOME
+		!byte <DoUPLINE, <DoCR
+		!byte <DoULINEON, <DoULINEOFF
+		!byte <DoESC_GRAPHICS, <DoESC_RULER
+		!byte <DoREV_ON, <DoREV_OFF
+		!byte <DoGOTOX, <DoGOTOY
+		!byte <DoGOTOXY, <DoNEWCARDSET
+		!byte <DoBOLDON, <DoITALICON
+		!byte <DoOUTLINEON, <DoPLAINTEXT
+
+PutCharTabH	!byte >DoBACKSPACE, >DoTAB	;e276
+		!byte >DoLF, >DoHOME
+		!byte >DoUPLINE, >DoCR
+		!byte >DoULINEON, >DoULINEOFF
+		!byte >DoESC_GRAPHICS, >DoESC_RULER
+		!byte >DoREV_ON, >DoREV_OFF
+		!byte >DoGOTOX, >DoGOTOY
+		!byte >DoGOTOXY, >DoNEWCARDSET
+		!byte >DoBOLDON, >DoITALICON
+		!byte >DoOUTLINEON, >DoPLAINTEXT
+
+_SmallPutChar					;e28a
+		+subv $20
+		JMP Font_10
+
+DoTAB		LDA #0				;e290
+		+add r11L
+		STA r11L
+		BCC *+4
+		INC r11H
+		RTS
+
+DoLF		LDA r1H 			;e29c
+		SEC
+		ADC curHeight
+		STA r1H
+		RTS
+
+DoHOME		+LoadW r11, 0			;e2a4
+		STA r1H
+		RTS				;!!!place DoESC_RULER here
+
+DoUPLINE	+SubB curHeight, r1H		;e2ad
+		RTS
+
+DoCR		+MoveW leftMargin, r11		;e2b5
+		JMP DoLF
+
+DoULINEON	+smbf UNDERLINE_BIT, currentMode	;e2c0
+		RTS
+
+DoULINEOFF	+rmbf UNDERLINE_BIT, currentMode	;e2c7
+		RTS
+
+DoREV_ON	+smbf REVERSE_BIT, currentMode		;e2ce
+		RTS
+
+DoREV_OFF	+rmbf REVERSE_BIT, currentMode		;e2d5
+		RTS
+
+DoGOTOX 	INC r0L 			;e2dc
+		BNE *+4
+		INC r0H
+		LDY #0
+		LDA (r0),y
+		STA r11L
+		INC r0L
+		BNE *+4
+		INC r0H
+		LDA (r0),y
+		STA r11H
+		RTS
+
+DoGOTOY 	INC r0L 			;e2f3
+		BNE *+4
+		INC r0H
+		LDY #0
+		LDA (r0),y
+		STA r1H
+		RTS
+
+DoGOTOXY	JSR DoGOTOX			;e300
+		JMP DoGOTOY
+
+DoNEWCARDSET	+AddVW 3, r0			;e306
+		RTS
+
+DoBOLDON	+smbf BOLD_BIT, currentMode	;e312
+		RTS
+
+DoITALICON	+smbf ITALIC_BIT, currentMode	;e319
+		RTS
+
+DoOUTLINEON	+smbf OUTLINE_BIT, currentMode	;e320
+		RTS
+
+DoPLAINTEXT	+LoadB currentMode, NULL	;e327
+		RTS
+
+DoBACKSPC	LDX currentMode 		;e32c
+		JSR _GetRealSize
+		STY PrvCharWidth
+DoBACKSPACE	+SubB PrvCharWidth, r11L
+		BCS *+4
+		DEC r11H
+		+PushW r11
+		LDA #$5f
+		JSR Font_10
+		+PopW r11
+		RTS
+
+DoESC_GRAPHICS	INC r0L 			;e352
+		BNE *+4
+		INC r0H
+		JSR _GraphicsString
+		LDX #r0
+		JSR Ddec
+		LDX #r0
+		JSR Ddec			;!!!hint!!!
+		RTS
+
+_PutString					;e366
+		LDY #0
+		LDA (r0),y
+		BEQ PutStr1
+		JSR _PutChar
+		INC r0L
+		BNE *+4
+		INC r0H
+		+bra _PutString
+PutStr1 	RTS				;e378
+
+MenuStringFault +MoveW mouseRight, r11		;e379
+		RTS
+
+CalcDecimal	STA r2L 			;e384
+		+LoadB r2H, 4
+		+LoadW r3, 0
+CalcDec0	LDY #0				;e390
+		LDX r2H
+CalcDec1	LDA r0L 			;e394
+		SEC
+		SBC DecTabL,x
+		STA r0L
+		LDA r0H
+		SBC DecTabH,x
+		BCC CalcDec2
+		STA r0H
+		INY
+		+bra CalcDec1
+CalcDec2	LDA r0L				;e3a9
+		ADC DecTabL,x
+		STA r0L
+		TYA
+		BNE CalcDec3
+		CPX #0
+		BEQ CalcDec3
+		+bbsf 6, r2L, CalcDec4
+CalcDec3	ORA #"0"			;e3bb
+		LDX r3L
+		STA Z46,x
+		LDX currentMode
+		JSR _GetRealSize
+		TYA
+		+add r3H
+		STA r3H
+		INC r3L
+		LDA #%10111111
+		AND r2L
+		STA r2L
+CalcDec4	DEC r2H 			;e3d4
+		BPL CalcDec0
+		RTS
+
+DecTabL 	!byte <1, <10, <100, <1000, <10000 ;e3d9
+DecTabH 	!byte >1, >10, >100, >1000, >10000 ;e3de
+
+_PutDecimal					;e3e3
+		JSR CalcDecimal
+		+bbsf 7, r2L, PutDec1
+		LDA r2L
+		AND #%00111111
+		+add r11L
+		STA r11L
+		BCC *+4
+		INC r11H
+		LDX #$18
+		JSR NormalizeX			;e3f7
+		+SubB r3H, r11L
+		BCS *+4
+		DEC r11H
+PutDec1 	LDX r3L 			;e407
+		STX r0L
+PutDec2 	LDA Z46-1,x			;e40b
+		PHA
+		DEX
+		BNE PutDec2
+PutDec3 	PLA				;e411
+		JSR _PutChar
+		DEC r0L
+		BNE PutDec3
+		RTS
+
+PrntDrvMemTab	!word prntDrvMemBuff		;e41a
+		!word PRINTBASE
+		!word $0640
+		!byte $01, $01
+
+FileHeadMemTab	!word fileHeadMemBuff		;e422
+		!word fileHeader
+		!word $0100
+
+_GetFile					;e428
+		+bbrf 4, sysRAMFlg, GetFileCont
+		+CmpBI r6H, $84
+		BNE GetFileCont
+		LDA r6L
+		+subv $65
+		ORA r0L
+		BNE GetFileCont
+		LDY #7
+GFMem0		LDA PrntDrvMemTab,Y		;e440
+		STA r0L,Y
+		DEY
+		BPL GFMem0
+		JSR MoveBData
+		LDY #5
+GFMem1		LDA FileHeadMemTab,Y		;e44e
+		STA r0L,Y
+		DEY
+		BPL GFMem1
+		JSR MoveBData
+		LDX #0
+GFileEnd	RTS				;e45c
+GetFileCont					;e45d
+	JSR UNK_5
+		JSR FindFile
+		+bnex GFileEnd
+	JSR UNK_4
+		+LoadW r9, dirEntryBuf
+		+CmpBI dirEntryBuf + OFF_GFILE_TYPE, DESK_ACC
+		BNE GFile0
+		JMP LdDeskAcc
+GFile0		CMP #APPLICATION		;e47b
+		BEQ GFile1
+		CMP #AUTO_EXEC
+		BNE _LdFile
+GFile1		JMP LdApplic			;e483
+_LdFile 					;e486
+		JSR GetFHdrInfo
+		+beqx LDFile1
+		RTS
+LDFile1		+CmpBI fileHeader + O_GHSTR_TYPE, VLIR	;e48d
+		BNE GFile3
+		LDY #OFF_DE_TR_SC
+		LDA (r9),y
+		STA r1L
+		INY
+		LDA (r9),y
+		STA r1H
+		JSR ReadBuff
+		+bnex GFile5
+		LDX #INV_RECORD
+		LDA diskBlkBuf + 2
+		STA r1L
+		BEQ GFile5
+		LDA diskBlkBuf + 3
+		STA r1H
+GFile3	+bbrf 0, E8872, GFile4
+	+MoveW E8873, r7
+GFile4		+LoadW r2, $ffff		;e4c4
+		JSR ReadFile			;!!!hint!!!
+GFile5		RTS				;e4cd
+
+_FollowChain					;e4ce
+		PHP
+		SEI
+		+PushB r3H
+		JSR EnterTurbo
+		JSR InitForIO
+		+LoadW r4, diskBlkBuf
+		LDY #0
+FChain0 	LDA r1L 			;e4e3
+		STA (r3),y
+		INY
+		LDA r1H
+		STA (r3),y
+		INY
+		BNE FChain1
+		INC r3H
+FChain1 	LDA r1L 			;e4f1
+		BEQ FChain2
+		TYA
+		PHA
+		JSR ReadLink
+		PLA
+		TAY
+		+bnex FChain3
+		+MoveW diskBlkBuf, r1
+		+bra FChain0
+FChain2 	LDX #0				;e50c
+FChain3 	JSR DoneWithIO			;e50e
+		+PopB r3H
+		PLP
+	 	RTS
+
+_FindFTypes					;e516
+		PHP
+		SEI
+		+MoveW r6, r1
+		+LoadB r0H, 0
+		LDA r7H
+		ASL
+		ROL r0H
+		ASL
+		ROL r0H
+		ASL
+		ROL r0H
+		ASL
+		ROL r0H
+		ADC r7H
+		STA r0L
+		BCC *+4
+		INC r0H
+ 		JSR ClearRam
+		+SubVW 3, r6
+		JSR Get1stDirEntry
+		+bnex FFTypes5
+		LDX #>GetSerialNumber		;!!!hint!!!
+		LDA #<GetSerialNumber
+		JSR CallRoutine
+		+CmpB r0H, EE7AF
+		BEQ FFTypes1
+		INC EC218
+FFTypes1	LDY #OFF_CFILE_TYPE		;e561
+		LDA (r5),y
+		BEQ FFTypes4
+		LDY #OFF_GFILE_TYPE
+		LDA (r5),y
+		CMP r7L
+		BNE FFTypes4
+ 		JSR GetHeaderFileName
+		+bnex FFTypes5
+		TYA
+		BNE FFTypes4
+		LDY #OFF_FNAME
+FFTypes2	LDA (r5),y			;e57a
+		CMP #$a0
+		BEQ FFTypes3
+		STA (r6),y
+		INY
+		CPY #OFF_FNAME + $10
+		BNE FFTypes2
+FFTypes3	LDA #NULL			;e587
+		STA (r6),y
+		+AddVW $11, r6
+		DEC r7H
+		BEQ FFTypes5
+FFTypes4	JSR GetNxtDirEntry		;e59a
+		+bnex FFTypes5
+		TYA
+		BEQ FFTypes1
+FFTypes5	PLP				;e5a3
+		RTS
+
+_FindFile					;e5a5
+		PHP
+		SEI
+		+SubVW 3, r6
+		JSR Get1stDirEntry
+		+bnex FFile7
+FFile1		LDY #OFF_CFILE_TYPE		;e5ba
+		LDA (r5),y
+		BEQ FFile4
+		LDY #OFF_FNAME
+FFile2		LDA (r6),y			;e5c2
+		BEQ FFile3
+		CMP (r5),y
+		BNE FFile4
+		INY
+		BNE FFile2
+FFile3		CPY #OFF_FNAME + $10		;e5cd
+		BEQ FFile5
+		LDA (r5),y
+		INY
+		CMP #$a0
+		BEQ FFile3
+FFile4		JSR GetNxtDirEntry		;e5d8
+		+bnex FFile7
+		TYA
+		BEQ FFile1
+		LDX #FILE_NOT_FOUND
+		BNE FFile7
+FFile5		LDY #0				;e5e5
+FFile6		LDA (r5),y			;e5e7
+		STA dirEntryBuf,y
+		INY
+		CPY #$1e
+		BNE FFile6
+		LDX #NULL
+FFile7		PLP				;e5f3
+		RTS
+
+_SetDevice					;e5f5
+		NOP				;!!!hint!!!
+		CMP curDevice
+		BEQ SetDev2
+		PHA
+		+CmpBI curDevice, 8
+		BCC SetDev1
+		CMP #12
+		BCS SetDev1
+		JSR ExitTurbo
+SetDev1 	PLA				;e608
+		STA curDevice
+SetDev2 	CMP #8				;e60b
+		BCC SetDev3
+		CMP #12
+		BCS SetDev3
+		TAY
+		LDA _driveType,y
+		STA curType
+		LDX curDrive
+		CPY curDrive
+		BEQ SetDev3
+		STY curDrive
+ 		+bbrf 6, sysRAMFlg, SetDev4
+ 		LDA SetDevDrivesTabL - 8,y	;e663
+		STA SetDevTab + 2		;e666
+		LDA SetDevDrivesTabH - 8,y
+		STA SetDevTab + 3
+		JSR PrepForFetch		;e650
+		JSR FetchRAM
+		JSR PrepForFetch
+SetDev3 	LDX #NULL			;e63f
+		RTS
+SetDev4		TXA				;e642
+		EOR curDrive
+		AND #1
+		BEQ SetDev5
+		JSR SwapMemDiskDrv
+SetDev5		LDX #NULL			;e64d
+		RTS
+
+PrepForFetch					;e650
+		LDY #6
+PFFet1		LDA r0,y			;e652
+		TAX
+		LDA SetDevTab,y
+		STA r0,y
+		TXA
+		STA SetDevTab,y
+		DEY
+		BPL PFFet1
+		RTS
+SetDevTab					;e664
+		!word DISK_BASE
+		!word $0000
+		!word DISK_DRV_LGH
+		!byte $00
+
+SetDevDrivesTabL				;e66b
+		!byte <REUDskDrvSPC+(0*DISK_DRV_LGH)
+		!byte <REUDskDrvSPC+(1*DISK_DRV_LGH)
+		!byte <REUDskDrvSPC+(2*DISK_DRV_LGH)
+		!byte <REUDskDrvSPC+(3*DISK_DRV_LGH)
+SetDevDrivesTabH				;e66f
+		!byte >REUDskDrvSPC+(0*DISK_DRV_LGH)
+		!byte >REUDskDrvSPC+(1*DISK_DRV_LGH)
+		!byte >REUDskDrvSPC+(2*DISK_DRV_LGH)
+		!byte >REUDskDrvSPC+(3*DISK_DRV_LGH)
+
+_GetFHdrInfo					;e673
+		LDY #OFF_GHDR_PTR
+		LDA (r9),y
+		STA r1L
+		INY
+		LDA (r9),y
+		STA r1H
+		+MoveW r1, fileTrScTab
+		JSR SetFHeadVector
+		JSR GetBlock
+		+bnex GFHdrInfo0		;!!!hint!!! +bnex GFHName4
+		LDY #OFF_DE_TR_SC
+		LDA (r9),y
+		STA r1L
+		INY
+		LDA (r9),y
+		STA r1H
+		JSR GetStartHAddy		;!!!hint!!!jmp GetStartHAddy
+GFHdrInfo0	RTS				;e69f
+
+GetHeaderFileName				;e6a0
+		LDX #0
+		LDA r10L
+		ORA r10H
+		BNE GHFName0
+		+CmpBI r7L, DESK_ACC
+		BNE GFHName2
+GHFName0	LDY #OFF_GHDR_PTR		;e6ae
+		LDA (r5),y
+		STA r1L
+		INY
+		LDA (r5),y
+		STA r1H
+		JSR SetFHeadVector
+		JSR GetBlock
+		+bnex GFHName4
+		TAY
+		LDA r10L
+		ORA r10H
+		BNE GFHName1
+		JSR CheckFileVideoFlags
+		BEQ GFHName2
+		LDX #0
+		BEQ GFHName3
+GFHName1	LDA (r10),y			;e6d2
+		BEQ GFHName2
+		CMP fileHeader+O_GHFNAME,y
+		BNE GFHName3
+		INY
+		BNE GFHName1
+GFHName2	LDY #0				;e6de
+		RTS
+GFHName3	LDY #$ff			;e6e1
+GFHName4	RTS				;e6e3
+
+_LdDeskAcc					;e6e4
+	+MoveB r10L, E8870
+		JSR GetFHdrInfo
+		+bnex LDAcc_1
+ 		JSR CheckFileVideoFlags
+		BNE LDAcc_1
+ 		+PushW r1
+		JSR SaveSwapFile
+		TXA
+		BEQ LDAcc_2
+		PLA
+		PLA
+LDAcc_1		RTS				;e702
+LDAcc_2		JSR DlgBoxPrep
+		+PopW r1
+		+PopW DeskAccPC
+		TSX
+		STX DeskAccSP
+		JSR GetStartHAddy
+		+LoadW r2, $ffff
+		JSR ReadFile
+		+bnex _RstrAppl
+ 		JSR UseSystemFont
+		JSR InitGEOEnv
+	+MoveB E8870, r10L
+		LDX fileHeader+O_GHST_VEC+1
+		LDA fileHeader+O_GHST_VEC
+		JMP _MNLP
+
+_RstrAppl	LDY #0				;e73b
+		STY r3L
+		STY r0L
+		INY
+		STY r3H
+		+LoadB r0H, $20
+		+MoveW dAccStart, r1
+		+MoveW dAccLength, r2
+		JSR MoveBData
+		JSR Dialog_2
+		LDA #0
+		LDX DeskAccSP
+		TXS
+		TAX
+		+PushW DeskAccPC
+		RTS
+
+EE772		JMP _EnterDeskTop		;!!!hint!!!
+
+_LdApplic	JSR UNK_5			;e775
+		JSR GetFHdrInfo
+		+bnex LDApp1
+		JSR CheckFileVideoFlags
+		BEQ LDApp2
+LDApp1		RTS				;e783
+LDApp2		JSR LDFile1
+		+bnex LDApp3
+		+bbsf 0, E8872, LDApp3
+		JSR UNK_4
+		+MoveW fileHeader+O_GHST_VEC, r7
+		JMP StartAppl
+LDApp3		JMP EnterDeskTop		;e7a1
+
+SwapFileName					;e7a4
+		!text $1b,"Swap File", NULL
+
+EE7AF		!byte $1c			;!!!hint - see FindFTypes copy protecion!!!
+
+SaveSwapFile					;e7b0
+		+MoveB fileHeader+O_GHST_ADDR, r0L
+		STA dAccStart
+		+MoveB fileHeader+O_GHST_ADDR+1, r0H
+		STA dAccStart+1
+		LDX #BFR_OVERFLOW
+ 		LDA fileHeader+O_GHEND_ADDR
+		+sub r0L
+		STA r2L
+		STA dAccLength
+		LDA fileHeader+O_GHEND_ADDR+1
+		SBC r0H
+		STA r2H
+		STA dAccLength+1
+		CMP #$60
+		BCS SvSwFile0
+		LDY #0
+		STY r3H
+		STY r1L
+		INY
+		STY r3L
+		LDA #$20
+		STA r1H
+		JSR MoveBData
+		LDX #0
+SvSwFile0	RTS				;e7ed
+
+
+dAccStart	!word 0				;e7ee
+dAccLength	!word 0				;e7f0
+
+_SaveFile					;e7f2
+		LDY #0
+SaveFile1	LDA (r9),y			;e7f4
+		STA fileHeader,y
+		INY
+		BNE SaveFile1
+		JSR GetDirHead
+		+bnex SaveFileEnd
+		JSR GetFileLength
+		JSR SetBufTSVector
+		JSR BlkAlloc
+		+bnex SaveFileEnd
+		JSR SetBufTSVector
+		JSR SetGDirEntry
+		+bnex SaveFileEnd
+		JSR PutDirHead
+		+bnex SaveFileEnd
+		STA fileHeader+O_GHINFO_TXT
+		+MoveW dirEntryBuf+OFF_GHDR_PTR, r1
+		JSR SetFHeadVector
+		JSR PutBlock
+		+bnex SaveFileEnd
+		JSR ClearNWrite
+		+bnex SaveFileEnd
+		JSR GetStartHAddy
+		JSR WriteFile			;!!!hint!!!jmp WriteFile
+SaveFileEnd	RTS				;e83f
+
+GetFileLength					;e840
+		LDA fileHeader+O_GHEND_ADDR
+		+sub fileHeader+O_GHST_ADDR
+		STA r2L
+		LDA fileHeader+O_GHEND_ADDR+1
+		SBC fileHeader+O_GHST_ADDR+1
+		STA r2H
+		JSR GFLen1
+		+CmpBI fileHeader+O_GHSTR_TYPE, VLIR	;!!!hint!!!
+		BNE GFLen2
+GFLen1		+AddVW $fe, r2			;e85b
+GFLen2		RTS				;e866
+
+ClearNWrite					;e867
+		LDX #0
+		+CmpBI dirEntryBuf+OFF_GSTRUC_TYPE, VLIR	;!!!hint!!!
+		BNE CNWriEnd
+		+MoveW dirEntryBuf+OFF_DE_TR_SC, r1
+		TXA
+		TAY
+CNWri1		STA diskBlkBuf,y		;e87c
+		INY
+		BNE CNWri1
+		DEY
+		STY diskBlkBuf+1
+		JSR WriteBuff			;!!!hint!!!jmp WriteBuff
+CNWriEnd	RTS				;e889
+
+_SetGDirEntry					;e88a
+		JSR BldGDirEntry
+		JSR GetFreeDirBlk
+		+bnex SGDEnt2
+		TYA
+		+addv <diskBlkBuf
+		STA r5L
+		LDA #>diskBlkBuf
+		ADC #0
+		STA r5H
+		LDY #$1d
+SGDEnt1 	LDA dirEntryBuf,y		;e8a1
+		STA (r5),y
+		DEY
+		BPL SGDEnt1
+		JSR SGDCopyDate
+		JSR WriteBuff			;!!!hint!!!JMP WriteBuff
+SGDEnt2		RTS				;e8af
+
+SGDCopyDate	LDY #$17			;e8b0
+SGDCDat1	LDA dirEntryBuf+$ff,y		;e8b2
+		STA (r5),y
+		INY
+		CPY #$1c
+		BNE SGDCDat1
+	 	RTS
+
+_DeleteFile					;e8bd
+		JSR FindNDelete
+		+beqx DelFile1
+		RTS				;!!!hint!!!
+DelFile1	+LoadW r9, dirEntryBuf		;e8c4
+_FreeFile	PHP				;e8cc
+		SEI
+		JSR GetDirHead
+		+bnex DelFile4
+		LDY #OFF_GHDR_PTR
+		LDA (r9),y
+		BEQ DelFile2
+		STA r1L
+		INY
+		LDA (r9),y
+		STA r1H
+		JSR FreeBlockChain
+		+bnex DelFile4
+DelFile2	LDY #OFF_DE_TR_SC		;e8e7
+		LDA (r9),y
+		STA r1L
+		INY
+		LDA (r9),y
+		STA r1H
+		JSR FreeBlockChain
+		+bnex DelFile4
+		LDY #OFF_GSTRUC_TYPE
+		LDA (r9),y
+		CMP #VLIR			;!!!hint!!!
+		BNE DelFile3
+		JSR DeleteVlirChains
+		+bnex DelFile4
+DelFile3	JSR PutDirHead			;e906
+DelFile4	PLP				;e909
+		RTS
+
+DeleteVlirChains				;e90b
+		+LoadW r4, fileHeader
+		JSR GetBlock
+		LDY #2
+DelVlirC2	TYA				;e918
+		BEQ DelVlirC3
+		LDA fileHeader,y
+		STA r1L
+		INY
+		LDA fileHeader,y
+		STA r1H
+		INY
+		LDA r1L
+		BEQ DelVlirC2
+		TYA
+		PHA
+		JSR FreeBlockChain
+		PLA
+		TAY
+		+beqx DelVlirC2
+DelVlirC3	RTS				;e935
+
+FreeBlockChain					;e936
+		+MoveW r1, r6
+		+LoadW r2, 0
+		JSR EnterTurbo
+		JSR InitForIO
+FreeBlC1	JSR FreeBlock			;e94a
+		+bnex FreeBlC4
+		INC r2L
+		BNE FreeBlC2
+		INC r2H
+FreeBlC2	+PushW r2			;e956
+		+MoveW r6, r1
+		+LoadW r4, diskBlkBuf
+		JSR ReadLink
+		+PopW r2
+		+bnex FreeBlC4
+		LDA diskBlkBuf
+		BEQ FreeBlC3
+		STA r6L
+		LDA diskBlkBuf+1
+		STA r6H
+		+bra FreeBlC1
+FreeBlC3	LDX #NULL			;e987
+FreeBlC4	JMP DoneWithIO			;e989
+
+FindNDelete					;e98c
+		+MoveW r0, r6
+		JSR FindFile
+		+bnex FNDelete1
+		LDA #0
+		TAY
+		STA (r5),y
+		JSR WriteBuff			;!!!hint!!!jmp WriteBuff
+FNDelete1	RTS				;e9a2
+
+_FastDelFile					;e9a3
+		+PushW r3
+		JSR FindNDelete
+		+PopW r3
+		+bnex FastDel1
+		JSR FreeChainByTab		;!!!hint!!!
+FastDel1	RTS
+
+FreeChainByTab					;e9b9
+		+PushW r3
+		JSR GetDirHead
+		+PopW r3
+FCByTab1	LDY #0				;e9c8
+		LDA (r3),y
+		BEQ FCByTab2
+		STA r6L
+		INY
+		LDA (r3),y
+		STA r6H
+		JSR FreeBlock
+		+bnex FCByTab3
+		+AddVW 2, r3
+		+bra FCByTab1
+FCByTab2	JSR PutDirHead			;e9e9 !!!hint!!!jmp PutDirHead
+FCByTab3	RTS				;e9ec
+
+_RenameFile					;e9ed
+		+PushW r0
+		JSR FindFile
+		+PopW r0
+		+bnex RenFile4
+		+AddVW OFF_FNAME, r5
+		LDY #0
+RenFile1	LDA (r0),y			;ea0c
+		BEQ RenFile2
+		STA (r5),y
+		INY
+		CPY #16
+		BCC RenFile1
+		BCS RenFile3
+RenFile2	LDA #$a0			;ea19
+		STA (r5),y
+		INY
+		CPY #16
+		BCC RenFile2
+RenFile3	JSR WriteBuff			;ea22 !!!hint!!!jmp WriteBuff
+RenFile4	RTS				;ea25
+
+_OpenRecordFile					;ea26
+		+MoveW r0, r6
+		JSR FindFile
+		+bnex OpRecFile4
+		LDX #10
+		LDY #OFF_CFILE_TYPE
+		LDA (r5),y
+		AND #%00111111
+		CMP #USR
+		BNE OpRecFile4
+		LDY #OFF_GSTRUC_TYPE
+		LDA (r5),y
+ 		CMP #VLIR
+		BNE OpRecFile4
+		LDY #OFF_DE_TR_SC
+		LDA (r5),y
+		STA RecordTableTS
+		INY
+		LDA (r5),y
+		STA RecordTableTS+1
+ 		+MoveW r1, RecordDirTS
+		+MoveW r5, RecordDirOffs
+		+MoveW dirEntryBuf+OFF_SIZE, fileSize
+		JSR GetVLIRTab
+		+bnex OpRecFile4
+		STA usedRecords
+		LDY #2
+OpRecFile1	LDA fileHeader,y		;ea80
+		ORA fileHeader+1,y
+		BEQ OpRecFile2
+		INC usedRecords
+		INY
+		INY
+		BNE OpRecFile1
+OpRecFile2	LDY #0				;ea8f
+		LDA usedRecords
+		BNE OpRecFile3
+		DEY
+OpRecFile3	STY curRecord			;ea97
+		LDX #NULL
+		STX fileWritten
+		RTS
+
+_CloseRecordFile				;eaa0
+		JSR _UpdateRecordFile
+OpRecFile4					;eaa3
+		+LoadB RecordTableTS, NULL
+		RTS
+
+_UpdateRecordFile				;eaa9
+		LDX #0
+		LDA fileWritten
+		BEQ URecFile1
+		JSR PutVLIRTab
+		+bnex URecFile1
+		+MoveW RecordDirTS, r1
+		JSR ReadBuff
+		+bnex URecFile1
+		+MoveW RecordDirOffs, r5
+		JSR SGDCopyDate
+		LDY #OFF_SIZE
+		LDA fileSize
+		STA (r5),y
+		INY
+		LDA fileSize+1
+		STA (r5),y
+		JSR WriteBuff
+		+bnex URecFile1
+		JSR PutDirHead
+		LDA #NULL
+		STA fileWritten
+URecFile1	RTS				;eaee
+
+_NextRecord					;eaef
+		LDA curRecord
+		+addv 1
+		+bra _PointRecord
+_PreviousRecord 				;eaf8
+		LDA curRecord
+		+subv 1
+_PointRecord					;eafe
+		TAX
+		BMI PoiRecord1
+		CMP usedRecords
+		BCS PoiRecord1
+		STA curRecord
+		JSR GetVLIRChainTS
+		LDY r1L
+		LDX #0
+		BEQ PoiRecord2
+PoiRecord1	LDX #INV_RECORD 		;eb12
+PoiRecord2	LDA curRecord			;eb14
+		RTS
+
+_DeleteRecord					;eb18
+		LDX #INV_RECORD
+		LDA curRecord
+		BMI DelRecord3
+		JSR ReadyForUpdVLIR
+		+bnex DelRecord3
+		JSR GetVLIRChainTS
+		+MoveB curRecord, r0L
+		JSR MoveBackVLIRTab
+		+bnex DelRecord3
+		+CmpB curRecord, usedRecords
+		BCC DelRecord1
+		DEC curRecord
+DelRecord1	LDX #NULL			;eb3e
+		LDA r1L
+		BEQ DelRecord3
+		JSR FreeBlockChain
+		+bnex DelRecord3
+		+SubB r2L, fileSize
+		BCS DelRecord2
+		DEC fileSize+1
+DelRecord2	LDX #NULL			;eb58
+DelRecord3	RTS				;eb5a
+
+_InsertRecord					;eb5b
+		LDX #INV_RECORD
+		LDA curRecord
+		BMI InsRec0
+		JSR ReadyForUpdVLIR
+		+bnex InsRec0
+		LDA curRecord
+		STA r0L
+		JSR MoveForwVLIRTab		;!!!hint!!!jmp MoveForwVLIRTab
+InsRec0		RTS				;eb70
+
+_AppendRecord					;eb71
+		JSR ReadyForUpdVLIR
+		+bnex AppRecord1
+		LDA curRecord
+		+addv 1
+		STA r0L
+		JSR MoveForwVLIRTab
+		+bnex AppRecord1
+		+MoveB r0L, curRecord
+AppRecord1	RTS				;eb8a
+
+_ReadRecord					;eb8b
+		LDX #INV_RECORD
+		LDA curRecord
+		BMI ReaRecord1
+		JSR GetVLIRChainTS
+		LDA r1L
+		TAX
+		BEQ ReaRecord1
+		JSR ReadFile
+		LDA #$ff
+ReaRecord1	RTS				;eb9f
+
+_WriteRecord					;eba0
+		LDX #INV_RECORD
+		LDA curRecord
+		BMI WriRecord5
+		+PushW r2
+		JSR ReadyForUpdVLIR
+		+PopW r2
+		+bnex WriRecord5
+		JSR GetVLIRChainTS
+		LDA r1L
+		BNE WriRecord1
+		LDX #0
+		LDA r2L
+		ORA r2H
+		BEQ WriRecord5
+		BNE WriRecord3
+WriRecord1	+PushW r2			;ebca
+		+PushW r7
+		JSR FreeBlockChain
+		+MoveB r2L, r0L
+		+PopW r7
+		+PopW r2
+		+bnex WriRecord5
+		+SubB r0L, fileSize
+		BCS WriRecord2
+		DEC fileSize+1
+WriRecord2	LDA r2L 			;ebfa
+		ORA r2H
+		BEQ WriRecord4
+WriRecord3	JMP WriteVLIRChain		;ec00
+WriRecord4	LDY #$FF			;ec03
+		STY r1H
+		INY
+		STY r1L
+		JSR PutVLIRChainTS		;!!!hint!!!jmp PutVLIRChainTS
+WriRecord5	RTS				;ec0d
+
+GetVLIRTab					;ec0e
+		JSR SetVLIRTable
+		+bnex GVLIREnd
+		JSR GetBlock			;!!!hint!!!jmp GetBlock
+GVLIREnd	RTS				;ec17
+
+PutVLIRTab					;ec18
+		JSR SetVLIRTable
+		+bnex PVLIREnd
+		JSR PutBlock			;!!!hint!!!jmp PutBlock
+PVLIREnd	RTS				;ec21
+
+SetVLIRTable	LDX #UNOPENED_VLIR		;ec22
+		LDA RecordTableTS
+		BEQ SVLIRTab1
+		STA r1L
+		LDA RecordTableTS+1
+		STA r1H
+		JSR SetFHeadVector
+		LDX #NULL
+SVLIRTab1	RTS				;ec35
+
+MoveBackVLIRTab 				;ec36
+		LDX #INV_RECORD
+		LDA r0L
+		BMI MBVLIRTab3
+		ASL
+		TAY
+		LDA #$7e
+		+sub r0L
+		ASL
+		TAX
+		BEQ MBVLIRTab2
+MBVLIRTab1	LDA fileHeader+4,y		;ec47
+		STA fileHeader+2,y
+		INY
+		DEX
+		BNE MBVLIRTab1
+MBVLIRTab2	STX fileHeader+$fe		;ec51
+		STX fileHeader+$ff
+		DEC usedRecords
+MBVLIRTab3	RTS				;ec5a
+
+MoveForwVLIRTab 				;ec5b
+		LDX #OUT_OF_RECORDS
+		+CmpBI usedRecords, $7f
+		BCS MFVLIRTab3
+		LDX #INV_RECORD
+		LDA r0L
+		BMI MFVLIRTab3
+		LDY #$fe
+		LDA #$7e
+		+sub r0L
+		ASL
+		TAX
+		BEQ MFVLIRTab2
+MFVLIRTab1	LDA fileHeader-1,y		;ec75
+		STA fileHeader+1,y
+		DEY
+		DEX
+		BNE MFVLIRTab1
+MFVLIRTab2	TXA				;ec7f
+		STA fileHeader,y
+		LDA #$ff
+		STA fileHeader+1,y
+		INC usedRecords
+MFVLIRTab3	RTS				;ec8b
+
+GetVLIRChainTS					;ec8c
+		LDA curRecord
+		ASL
+		TAY
+		LDA fileHeader+2,y
+		STA r1L
+		LDA fileHeader+3,y
+		STA r1H
+		RTS
+
+PutVLIRChainTS					;ec9c
+		LDA curRecord
+		ASL
+		TAY
+		LDA r1L
+		STA fileHeader+2,y
+		LDA r1H
+		STA fileHeader+3,y
+		RTS
+
+WriteVLIRChain					;ecac
+		JSR SetBufTSVector
+		+PushW r7
+		JSR BlkAlloc
+		+PopW r7
+		+bnex WVLIRChain1
+		+PushB r2L
+		JSR SetBufTSVector
+		JSR WriteFile
+		+PopB r2L
+		+bnex WVLIRChain1
+		+MoveW fileTrScTab, r1
+		JSR PutVLIRChainTS
+		+bnex WVLIRChain1
+		+AddB r2L, fileSize
+		BCC WVLIRChain1
+		INC fileSize+1
+WVLIRChain1	RTS				;ecee
+
+ReadyForUpdVLIR 				;ecef
+		LDX #NULL
+		LDA fileWritten
+		BNE RFUpdVLIR1
+		JSR GetDirHead
+		+bnex RFUpdVLIR1
+		LDA #TRUE
+		STA fileWritten
+RFUpdVLIR1	RTS				;ed01
+
+_ReadByte					;ed02
+		LDY r5H
+		CPY r5L
+		BEQ ReadByt2
+		LDA (r4),y
+		INC r5H
+		LDX #NULL
+ReadByt1	RTS				;ed0e
+ReadByt2	LDX #BFR_OVERFLOW
+		LDA r1L
+		BEQ ReadByt1
+		JSR GetBlock
+		+bnex ReadByt1
+		LDY #2
+		STY r5H
+		DEY
+		LDA (r4),y
+		STA r1H
+		TAX
+		DEY
+		LDA (r4),y
+		STA r1L
+		BEQ ReadByt3
+		LDX #$ff
+ReadByt3	INX
+		STX r5L
+		+bra _ReadByte
+
+_DoDlgBox					;ed34
+		+MoveW r0, DBoxDesc
+		LDX #0
+DDlgB1		LDA r5L,x			;ed3e
+		PHA
+		INX
+		CPX #12
+		BNE DDlgB1
+		JSR TempHideMouse
+		JSR DlgBoxPrep
+		JSR DrawDlgBox
+		+LoadB r11H, 0			;!!!hint!!!+LoadW r11, 0
+		+LoadB r11L, 0
+		JSR _StartMouseMode
+		JSR _UseSystemFont
+		LDX #11
+DDlgB2		PLA				;ed5f
+		STA r5L,x
+		DEX
+		BPL DDlgB2
+		LDY #0
+		LDX #7
+		LDA (DBoxDesc),y
+		BPL DDlgB3
+		LDX #1
+DDlgB3		TXA				;ed6f
+		TAY
+DDlgB31 	LDA (DBoxDesc),y		;ed71
+		STA r0L
+		BEQ DDlgB6
+		LDX #0
+DDlgB4		LDA r5L,x			;ed79
+		PHA
+		INX
+		CPX #12
+		BNE DDlgB4
+		INY
+		STY r1L
+		LDY r0L
+		LDA DlgBoxProcL-1,y
+		LDX DlgBoxProcH-1,y
+		JSR CallRoutine
+		LDX #11
+DDlgB5		PLA				;ed91
+		STA r5L,x
+		DEX
+		BPL DDlgB5
+		LDY r1L
+		+bra DDlgB31
+DDlgB6		LDA defIconTab			;ed9c
+		BEQ DDlgB7
+		+LoadW r0, defIconTab
+		JSR DoIcons
+DDlgB7		+PopW dlgBoxCallerPC
+		TSX
+		STX dlgBoxCallerSP
+		JMP MainLoop
+
+DlgBoxPrep	+PushB config	 		;edbb
+		+LoadB config, CIOIN
+		+LoadW r4, dlgBoxRamBuf
+		JSR Dialog_3
+		+LoadB mobenble, 1
+		+PopB config
+		JSR InitGEORam
+		+LoadB sysDBData, NULL
+		RTS
+
+DrawDlgBox	+LoadB dispBufferOn, ST_WR_FORE | ST_WRGS_FORE
+		LDY #0
+		LDA (DBoxDesc),y
+		AND #%00011111
+		BEQ DrwDlgBx1
+		JSR SetPattern
+		SEC
+		JSR CalcDialogCoords
+		LDA r3H
+		AND #%10000000
+		STA E8871
+		JSR Rectangle
+DrwDlgBx1	LDA #0				;edfe
+		JSR SetPattern
+		CLC
+		JSR CalcDialogCoords
+		+MoveW r4, rightMargin
+		JSR Rectangle
+		CLC
+		JSR CalcDialogCoords
+		LDA #$ff
+		JSR FrameRectangle
+		LDA #0
+		STA defIconTab
+		STA defIconTab+1
+		STA defIconTab+2
+		RTS
+
+Dialog_1	LDY #0				;ee27
+		LDA (DBoxDesc),y
+		AND #%00011111
+		BEQ Dialog_11
+		SEC
+		JSR Dialog_12
+Dialog_11	CLC				;ee33
+Dialog_12	JSR CalcDialogCoords		;ee34
+		JMP RcvrMnu0
+
+CalcDialogCoords				;ee3a
+		LDA #0
+		BCC ClcDlgCoor1
+		LDA #8
+ClcDlgCoor1	STA r1H 			;ee40
+		+PushW DBoxDesc
+		LDY #0
+		LDA (DBoxDesc),y
+		BPL ClcDlgCoor2
+		LDA #>DBDefinedPos-1
+		STA DBoxDescH
+		LDA #<DBDefinedPos-1
+		STA DBoxDesc
+ClcDlgCoor2	LDX #0				;ee56
+		LDY #1
+ClcDlgCoor3	LDA (DBoxDesc),y		;ee5a
+		CLC
+		ADC r1H
+		STA r2L,x
+		INY
+		INX
+		CPX #2
+		BNE ClcDlgCoor3
+ClcDlgCoor4	LDA (DBoxDesc),y		;ee67
+		CLC
+		ADC r1H
+		STA r2L,x
+		INY
+		INX
+		LDA (DBoxDesc),y
+		BCC *+4
+		ADC #0
+		STA r2L,x
+		INY
+		INX
+		CPX #6
+		BNE ClcDlgCoor4
+		+PopW DBoxDesc
+		RTS
+
+DBDefinedPos	!byte DEF_DB_TOP		;ee85
+		!byte DEF_DB_BOT
+		!word DEF_DB_LEFT | DOUBLE_W
+		!word DEF_DB_RIGHT | DOUBLE_W
+
+_RstrFrmDialogue				;ee8b
+		JSR Dialog_2
+		JSR Dialog_1
+		+MoveB sysDBData, r0L
+		LDX dlgBoxCallerSP
+		TXS
+		+PushW dlgBoxCallerPC
+		RTS
+
+Dialog_2	+PushB config	 		;eea3
+		+LoadB config, CIOIN
+		+LoadW r4, dlgBoxRamBuf
+		JSR Dialog_4
+		+PopB config
+		RTS
+
+DBDoSYSOPV	LDA #>DBStringFaultVec		;eebc
+		STA otherPressVec+1
+		LDA #<DBStringFaultVec
+		STA otherPressVec
+		RTS
+
+Dialog_3	LDX #0				;eec7
+		LDY #0
+Dialog_31 	JSR Dialog_5			;eecb
+		BEQ Dialog_33
+Dialog_32	LDA (r2),y			;eed0
+		STA (r4),y
+		INY
+		DEC r3L
+		BNE Dialog_32
+		BEQ Dialog_31
+Dialog_33	RTS				;eedb
+
+Dialog_4	PHP				;eedc
+		SEI
+		LDX #0
+		LDY #0
+Dialog_41 JSR Dialog_5				;eee2
+		BEQ Dialog_43
+Dialog_42	LDA (r4),y			;eee7
+		STA (r2),y
+		INY
+		DEC r3L
+		BNE Dialog_42
+		BEQ Dialog_41
+Dialog_43	PLP				;eef2
+		RTS
+
+Dialog_5	TYA				;eef4
+		+add r4L
+		STA r4L
+		BCC *+4
+		INC r4H
+		LDY #0
+		LDA DialogCopyTab,x
+		STA r2L
+		INX
+		LDA DialogCopyTab,x
+		STA r2H
+		INX
+		ORA r2L
+		BEQ Dialog_51
+		LDA DialogCopyTab,x
+		STA r3L
+		INX
+Dialog_51	RTS				;ef16
+
+DialogCopyTab					;ef17
+		!word curPattern
+		!byte 23
+		!word appMain
+		!byte 38
+		!word IconDescVec
+		!byte 2
+		!word menuOptNumber
+		!byte 49
+		!word TimersTab
+		!byte 227
+		!word obj0Pointer
+		!byte 8
+		!word mob0xpos
+		!byte 17
+		!word mobenble
+		!byte 1
+		!word mobprior
+		!byte 3
+		!word mcmclr0
+		!byte 2
+		!word mob1clr
+		!byte 7
+		!word moby2
+		!byte 1
+		!word NULL
+
+DBDoIcons	DEY				;ef3d
+		BNE DBDoIcns1
+		LDA keyVector
+		ORA keyVector+1
+		BNE DBDoIcns1
+		LDA #>DBKeyVector
+		STA keyVector+1
+		LDA #<DBKeyVector
+		STA keyVector
+DBDoIcns1	TYA				;ef52
+		ASL
+		ASL
+		ASL
+		CLC
+		ADC #<DBDefIconsTab
+		STA r5L
+		LDA #0
+		ADC #>DBDefIconsTab
+		STA r5H
+		JSR DBIconsHelp1
+		LDY #4
+		LDA (r5),y
+		AND #$ff
+		ORA E8871
+		STA (r5),y
+		JMP DBIconsHelp2
+
+DBDoUSRICON	JSR DBIconsHelp1		;ef70
+		LDA (DBoxDesc),y
+		STA r5L
+		INY
+		LDA (DBoxDesc),y
+		STA r5H
+		INY
+		TYA
+		PHA
+		JSR DBIconsHelp2
+		+PopB r1L
+		RTS
+
+DBIconsHelp1	CLC				;ef88
+		JSR CalcDialogCoords
+		LSR r3H
+		ROR r3L
+		LSR r3L
+		LSR r3L
+		LDY r1L
+		LDA (DBoxDesc),y
+		CLC
+		ADC r3L
+		STA r3L
+		INY
+		LDA (DBoxDesc),y
+		CLC
+		ADC r2L
+		STA r2L
+		INY
+		STY r1L
+		RTS
+
+DBIconsHelp2	LDX defIconTab			;efa9
+		CPX #8
+		BCS DBIcHlp_23
+		TXA
+		INX
+		STX defIconTab
+		JSR CalcIconDescTab
+		TAX
+		LDY #0
+DBIcHlp_20	LDA (r5),y			;efbb
+		CPY #2
+		BNE DBIcHlp_21
+		LDA r3L
+		ORA E8871
+DBIcHlp_21	CPY #3				;efc6
+		BNE DBIcHlp_22
+		LDA r2L
+DBIcHlp_22	STA defIconTab,x		;efcc
+		INX
+		INY
+		CPY #8
+		BNE DBIcHlp_20
+DBIcHlp_23	RTS				;efd5
+
+DBKeyVector	+CmpBI keyData, CR		;efd6
+		BEQ DBIcOK
+		RTS
+DBIcOK		LDA #OK 			;efde
+		BNE DBKeyVec1
+DBIcCANCEL	LDA #CANCEL			;efe2
+		BNE DBKeyVec1
+DBIcYES 	LDA #YES			;efe6
+		BNE DBKeyVec1
+DBIcNO		LDA #NO 			;efea
+		BNE DBKeyVec1
+DBIcOPEN	LDA #OPEN			;efee
+		BNE DBKeyVec1
+DBIcDISK	LDA #DISK			;eff2
+		BNE DBKeyVec1			;!!!hint!!!
+DBKeyVec1	STA sysDBData			;eff6
+		JMP RstrFrmDialogue
