@@ -9,12 +9,13 @@ ERRORS
 
 IDEAS
 + look if 2MHz can be ON during keyboardscanning (use geoPatch on living kernal)
+~ look how BURST mode can be used within 1571/81 driver
 - look what can be done with relocatable stack/zpage for IRQ (to avoid copying data)
 - look what can be done with relocatable stack and PHA/PLA for memory copying/fill functions
 - look what can be done with Z80 (and string operations)
 - look how Rectangle functions can be used with HorizontalLine without recalculating whole
   thing for each line
-- look how BURST mode can be used within 1571/81 driver
+- write Makefile and learn pucrunch to compress and execute it
 
 Proposed Layout: bank0
 

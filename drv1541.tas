@@ -469,9 +469,9 @@ __InitForIO					;9479
 		PLA
 		STA tmpPS
 		SEI
-;		LDA CPU_DATA
-;		STA tmpCPU_DATA
-;		+LoadB CPU_DATA, KRNL_IO_IN
+		LDA CPU_DATA
+		STA tmpCPU_DATA
+;;		+LoadB CPU_DATA, KRNL_IO_IN
 		LDA grirqen
 		STA tmpgrirqen
 		LDA clkreg
@@ -519,7 +519,9 @@ IniForIO0	LDA rasreg			;94dc
 		STA tmpDD00_2
 		RTS
 
-D_IRQHandler	PLA				;94fe
+D_IRQHandler	
+	+PopB $ff00	;!!! possible problems?
+		PLA				;94fe
 		TAY
 		PLA
 		TAX
@@ -535,8 +537,8 @@ __DoneWithIO	SEI				;9504
 		LDA cia2base+13
 		LDA tmpgrirqen
 		STA grirqen
-;		LDA tmpCPU_DATA
-;		STA CPU_DATA
+;;		LDA tmpCPU_DATA
+;;		STA CPU_DATA
 		LDA tmpPS
 		PHA
 		PLP
