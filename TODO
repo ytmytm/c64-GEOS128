@@ -1,5 +1,6 @@
 ERRORS
 !!! with DBox fix - cannot be loaded in 80 column mode, strange! (however can be BOOTed)
+!!! GeoMakeDir on hdd (need to check normal drive) can't properly save a file (fixed DBox version)
 - VDC screen positioning dont work
 - try binary drivers for 1571 and 1581 for boot
 + replace numbers by register names in all calls to NormalizeX
