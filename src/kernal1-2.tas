@@ -165,8 +165,6 @@ IRQHand6	PLA				;c46b
 		RTS
 
 _DoKeyboardScan					;c49e
-		+PushB clkreg
-		+LoadB clkreg, 0
  		LDA KbdQueFlag
 		BNE DoKbdScan1
 		LDA KbdNextKey
@@ -200,8 +198,7 @@ DoKbdScan3	PLA				;c4f5
 		STA KbdDMltTab,y
 DoKbdScan4	DEY				;c4f9
 		BPL DoKbdScan2
-DoKbdScan5	+PopB clkreg			;c4fc
-		RTS
+DoKbdScan5	RTS
 		
 KbdScanRow	+LoadB cia1base+0, $ff		;c501
 		STA keyreg
