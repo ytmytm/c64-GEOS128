@@ -1305,9 +1305,17 @@ BitmDe22	RTS				;ea77
 
 _UseSystemFont_					;ea78
 		+bbsf 7, graphMode, UseSysFnt80
-		+LoadW r0, BSWFont
+		;+LoadW r0, BSWFont
+		lda #>BSWFont
+		sta r0H
+		lda #<BSWFont
+		sta r0L
 		+bra _LoadCharSet_
-UseSysFnt80	+LoadW r0, BSWFont80		;ea87
+UseSysFnt80	;+LoadW r0, BSWFont80		;ea87
+		lda #>BSWFont80
+		sta r0H
+		lda #<BSWFont80
+		sta r0L
 _LoadCharSet_	LDY #0				;ea8f
 UseSysFnt1	LDA (r0),y			;ea91
 		STA baselineOffset,y
