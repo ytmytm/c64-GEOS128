@@ -1,0 +1,213 @@
+
+;GEOS Kernal - booter code
+;reassembled by Maciej 'YTM/Elysium' Witkowiak
+;24.09.2000
+
+E03E4		= $03e4
+
+E8FE8		= $8fe8
+E8FF0		= $8ff0
+
+		;*= $5000
+
+		SEI
+		NOP				;!!!hint
+		CLD
+		LDX #$ff
+		TXS
+		+LoadB config, CIOIN
+		+LoadB mmu+6, 0
+		LDA #<EndInterrupt
+		STA $fffa
+		STA $fffc
+		STA $fffe
+		LDA #>EndInterrupt
+		STA $fffb
+		STA $fffd
+		STA $ffff
+		JSR i_FillRam
+		!word $0500
+		!word dirEntryBuf
+		!byte 0
+		LDA mmu+5
+		AND #%10000000
+		EOR #%10000000
+		STA graphMode
+		JSR ClrScr
+		+LoadB mmu+6, %01000000
+		JSR FirstInit
+		JSR MOUSE_JMP
+		+LoadB E8890, $ff
+		+LoadB interleave, currentInterleave
+		+LoadB $9116, 1			;!!!hint copy-prot
+		LDY #8				;!!!hint LDY curDevice
+	!if (use1541) {
+		LDA #DRV_1541
+	} else {
+	!if (use1571) {
+		LDA #DRV_1571
+	} else {
+	!if (use1581) {
+		LDA #DRV_1581
+	}}}
+		STA _driveType,y
+		TYA
+		STA curDrive			;!!!hint remove tya above STY curDrive
+		
+		LDX #0
+		LDA $5f0f
+		CMP #$13
+		BNE Boot2
+		+bbrf 7, $5f13, Boot2
+		LDY #3
+Boot1		LDA $5f06,y			;506f
+		CMP bootTest,y
+		BNE Boot2
+		DEY
+		BPL Boot1
+		LDX #%10000000
+Boot2		TXA				;507c
+		STA firstBoot
+		BEQ Boot4
+		LDY #2
+Boot3		LDA $5f18,y			;5084
+		STA year,y
+		DEY
+		BPL Boot3
+		+MoveB $5f12, sysRAMFlg
+		+MoveB cia1base+8, cia1base+8
+		+bra Boot6
+
+Boot4		LDA cia1base+15			;509c
+		AND #%01111111
+		STA cia1base+15
+;		+LoadB cia1base+11, currentHour | (AMPM << 7)
+;		+LoadB cia1base+10, currentMinute
+;		+LoadW cia1base+8, 0
+;		+LoadB year, currentYear
+;		+LoadB month, currentMonth
+;		+LoadB day, currentDay
+		+LoadB cia1base+11, $81
+		+LoadW cia1base+9, 0
+		STA cia1base+8
+		+LoadB year, $58
+		+LoadB month, 8
+		+LoadB day, $16
+		LDX #7
+		LDA #$bb
+Boot5		STA E8FE8,x			;50c7
+		DEX
+		BPL Boot5
+		+LoadB E8FF0, $bf
+Boot6		LDA #>IRQHandler		;50d2
+		STA $ffff
+		LDA #<IRQHandler
+		STA $fffe
+		LDY #5
+Boot6_1		LDA $fffa,y			;50de
+		STA fileTrScTab,y
+		DEY
+		BPL Boot6_1
+		+PushB mmu+6
+		AND #%11110000
+		ORA #%00001110
+		STA mmu+6
+		LDY #5
+Boot6_2		LDA fileTrScTab,y		;50f4
+		STA $fffa,y
+		DEY
+		BPL Boot6_2
+		LDY #7
+Boot6_3		LDA E5131,y			;50ff
+		STA E03E4,y
+		DEY
+		BPL Boot6_3
+		+PopB mmu+6
+		JSR GetDirHead
+		+bnex Boot6_4
+		LDA #"B"
+		CMP curDirHead+OFF_GS_DTYPE
+		BEQ Boot6_4
+		STA curDirHead+OFF_GS_DTYPE
+		JSR PutDirHead
+Boot6_4		LDA mmu+5			;511f ;!!!hint why again?
+		AND #%10000000
+		EOR #%10000000
+		STA graphMode
+		JSR SetNewMode
+		JSR CopyrightCheck		;!!!hint
+		JMP Boot7
+
+E5131		+LoadB config, CIOIN		;5131
+		JMP OS_ROM
+
+Boot7		+MoveB bootSec, r1H		;5139
+		+MoveB bootTr, r1L
+		+AddVB 32, bootOffs
+		BNE Boot10
+Boot8		+MoveB bootSec2, r1H		;514e
+		+MoveB bootTr2, r1L
+		BNE Boot10
+Boot8_2		LDA NUMDRV			;515a
+		BNE Boot9
+		INC NUMDRV
+Boot9		+LoadB firstBoot, $ff		;5162
+		LDA #>_EnterDeskTop
+		STA EnterDeskTop+2
+		LDA #<_EnterDeskTop
+		STA EnterDeskTop+1
+		JMP EnterDeskTop
+Boot10		LDA r1H				;5174
+		STA bootSec
+		LDA r1L
+		STA bootTr
+		+LoadW r4, diskBlkBuf
+		JSR GetBlock
+		+bnex Boot8_2
+		+MoveB diskBlkBuf+1, bootSec2
+		+MoveB diskBlkBuf, bootTr2
+Boot101 	LDY bootOffs
+		LDA diskBlkBuf+2,y
+		BEQ Boot11
+		LDA diskBlkBuf+$18,y
+		CMP #AUTO_EXEC
+		BEQ Boot12
+Boot11		+AddVB 32, bootOffs		;51a7
+		BNE Boot101
+		BEQ Boot8
+Boot12		LDX #0				;51b4
+Boot13		LDA diskBlkBuf+2,y		;51b6
+		STA dirEntryBuf,x
+		INY
+		INX
+		CPX #30
+		BNE Boot13
+		+LoadW r9, dirEntryBuf
+		+LoadB r0, 0
+		LDA #>_BootEnterDeskTop
+		STA EnterDeskTop+2
+		LDA #<_BootEnterDeskTop
+		STA EnterDeskTop+1
+		JSR LdApplic
+_BootEnterDeskTop				;51db
+		SEI
+		CLD
+		LDX #$ff
+		TXS
+		JSR _DoFirstInitIO
+		JSR InitGEOEnv
+		JMP Boot7
+
+bootTr		!byte 0				;51e9
+bootSec 	!byte 0
+bootTr2 	!byte DIR_TRACK
+bootSec2	!byte 1
+bootOffs	!byte $e0
+
+bootTest	!text "GEOS"			;51ee
+
+CopyrightCheck					;51f2 !!!hint
+		LDA registeredFlag
+		BEQ E51F8
+		RTS
+E51F8

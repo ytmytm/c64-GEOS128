@@ -18,7 +18,10 @@
 !source "inc/diskdrv.inc"
 
 ;rules for compiling
-;!source "inc/equ.inc"
+!source "inc/equ.inc"
+
+		    *=$5000
+!source "src/booter.tas"
 
 		    *=$9d80
 !source "src/lokernal.tas"

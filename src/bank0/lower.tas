@@ -1,0 +1,765 @@
+
+; 18-08-2000, 29-08, 01-08
+E1300	= $1300		; mobenble copy
+E1301	= $1301		; moby2 copy
+E1302	= $1302		; mobx2 copy
+E1303	= $1303
+E1304	= $1304
+E1313	= $1313
+E131B	= $131b
+E131C	= $131c
+E132B	= $132b
+E1333	= $1333
+
+E1B45	= $1b45
+E1B46	= $1b46
+E1B47	= $1b47
+E1B48	= $1b48
+E1B49	= $1b49
+E1B4A	= $1b4a
+E1B4B	= $1b4b
+E1B4C	= $1b4c
+E1B54	= $1b54
+E1B55	= $1b55
+E1B6D	= $1b6d
+E1C2D	= $1c2d
+
+E887D	= $887d
+E887E	= $887e
+
+E8890	= $8890
+E8891	= $8891		; copy of X - Lo position of pointer
+E8892	= $8892		; X - Hi
+E8893	= $8893		; Y
+
+		;*=$c78d
+_BldGDirEntry_					;c78d
+		LDY #$1d
+		LDA #NULL
+BGDEnt1 	STA dirEntryBuf,y		;c791
+		DEY
+		BPL BGDEnt1
+		TAY
+		LDA (r9),y
+		STA r3L
+		INY
+		LDA (r9),y
+		STA r3H
+		STY r1H
+		DEY
+		LDX #OFF_FNAME
+BGDEnt2 	LDA (r3),y			;c7a6
+		BNE BGDEnt4
+		STA r1H
+BGDEnt3 	LDA #$a0			;c7ac
+BGDEnt4 	STA dirEntryBuf,x		;c7ae
+		INX
+		INY
+		CPY #16
+		BEQ BGDEnt5
+		LDA r1H
+		BNE BGDEnt2
+		BEQ BGDEnt3
+BGDEnt5 	LDY #O_GHCMDR_TYPE		;c7bd
+		LDA (r9),y
+		STA dirEntryBuf+OFF_CFILE_TYPE
+		LDY #O_GHSTR_TYPE
+		LDA (r9),y
+		STA dirEntryBuf+OFF_GSTRUC_TYPE
+		LDY #NULL
+		STY fileHeader
+		DEY
+		STY fileHeader+1
+		+MoveW fileTrScTab, dirEntryBuf+OFF_GHDR_PTR
+		JSR LoKernal			;->c80b
+		+MoveW fileTrScTab+2, dirEntryBuf+OFF_DE_TR_SC
+		+CmpBI dirEntryBuf+OFF_GSTRUC_TYPE, VLIR	;!hint!
+		BNE BGDEnt6
+		JSR LoKernal
+BGDEnt6 	LDY #O_GHGEOS_TYPE		;c7f9
+		LDA (r9),y
+		STA dirEntryBuf+OFF_GFILE_TYPE
+		+MoveW r2, dirEntryBuf+OFF_SIZE
+	 	RTS
+
+LoKernal	+AddVW 2, r6			;c80b
+	 	RTS
+
+; this is kinda flag
+EC817		!byte $01
+
+; this is spritetab start
+EC818	 	!byte <spr1pic, <spr2pic, <spr3pic
+		!byte <spr4pic, <spr5pic, <spr6pic, <spr7pic
+
+EC81F		!byte >spr1pic, >spr2pic, >spr3pic
+		!byte >spr4pic, >spr5pic, >spr6pic, >spr7pic
+
+; this should be softsprite tab
+EC826		!byte $3B, $61, $87, $AD, $D3, $F9, $1F
+EC82D		!byte $13, $14, $15, $16, $17, $18, $1A
+
+EC834		!byte $00, $03, $0C, $0F, $30, $33, $3C, $3F
+		!byte $C0, $C3, $CC, $CF, $F0, $F3, $FC, $FF
+		!byte $00, $0F, $7F, $EF, $7F, $9F, $7F, $9F
+		!byte $67, $E7, $19, $F9, $FE, $7E, $FF, $80
+		!byte $00, $00, $7F, $E0, $7F, $80, $7F, $80
+		!byte $67, $E0, $01, $F8, $00, $7E, $00, $00		
+
+;called by TempHideMouse
+;c864
+EC864		LDA EC817
+		BNE EC884
+		LDX #7
+		LDY #14
+EC86D		STX r0L				;c86d
+		STY r0H
+		LDA BitMask2,x
+		AND E1300
+		BEQ EC87C
+		JSR ECB68
+EC87C		DEY				;c87c
+		DEY
+		DEX
+		BNE EC86D
+		STX E1300
+EC884		JSR SetMMUShareTop		;c884 !!!hint
+		RTS
+
+_HideOnlyMouse_					;c888
+		+bbrf 7, graphMode, HOMseEnd
+		LDX #0
+HOMse_1		LDA r0,x			;c88e
+		PHA
+		INX
+		CPX #r5H+1
+		BNE HOMse_1
+		JSR EC8A5
+		LDX #r5H
+HOMse_2		PLA				;c89b
+		STA r0,x
+		DEX
+		BPL HOMse_2
+		JSR SetMMUShareTop		;!!!hint
+HOMseEnd	RTS
+
+;called by TempHideMouse
+;c8a5
+EC8A5		+bbsf 7, E8890, EC8B2		;c8a5
+		+LoadB E8890, $ff
+		JSR ECCF8
+EC8B2		JSR SetMMUShareBoth		;c8b2
+		LDX r0L
+		LDY r0H
+		RTS
+
+;!!!something? - mobenble and ~mobenble copies?
+EC8BA		!byte 0
+EC8BB		!byte 0
+
+; update software sprites status?
+_EE045_						;c8bc
+		JSR SetMMUShareBoth
+		LDA EC817
+		BEQ EC8D1
+		LDA #0
+		LDX #$1a
+EC8C8		STA E1300,x			;c8c8
+		DEX
+		BPL EC8C8
+		STA EC817
+EC8D1		+PushB dispBufferOn		;c8d1
+		+LoadB dispBufferOn, ST_WR_FORE
+		JSR EC9E8
+		LDA mobenble
+		EOR #$ff
+		ORA EC8BA
+		AND E1300
+		STA EC8BB
+		BEQ EC91A
+		JSR EC8A5
+		LDY #14
+		LDX #7
+EC8F2		STX r0L				;c8f2
+		STY r0H
+		LDA BitMask2,x
+		STA r9H
+		AND EC8BB
+		BEQ EC915
+		JSR ECB68
+		LDA E887D,y
+		STA E1303,y
+		LDA E887E,y
+		STA E1304,y
+		LDA mob0ypos,y
+		STA E1313,x
+EC915		DEY				;c915
+		DEY
+		DEX
+		BNE EC8F2
+EC91A		+MoveB moby2, E1301
+		+MoveB mobx2, E1302
+		+MoveB mobenble, E1300
+		JSR ECA6B
+		+PopB dispBufferOn
+		JSR SetMMUShareTop
+		+bbsf 0, mobenble, EC93D
+		RTS
+EC93D		+bbsf 7, E8890, EC95D		;c93d
+		SEI
+		LDA mouseXPos
+		LDX mouseXPos+1
+		LDY mouseYPos
+		CLI
+		CMP E8891
+		BNE EC95A
+		CPX E8892
+		BNE EC95A
+		CPY E8893
+		BNE EC95A
+		RTS
+EC95A		JSR ECCF8			;c95a
+EC95D		+LoadB E8890, 0			;c95d
+		+PushB dispBufferOn
+		+LoadB dispBufferOn, ST_WR_FORE
+		SEI
+		+MoveB mouseYPos, E8893
+		STA r2L
+		+MoveB mouseXPos+1, E8892
+		STA r1H
+		LDA mouseXPos
+		CLI
+		STA E8891
+		STA r1L
+		JSR SetMMUShareBoth
+		LDA r1L
+		AND #%00000111
+		ASL
+		ASL
+		ASL
+		STA r3H
+		ASL
+		ADC r3H
+		STA r3H
+		LSR r1H
+		ROR r1L
+		LSR r1H
+		ROR r1L
+		LSR r1H
+		ROR r1L
+		+LoadB r2H, 8
+		+LoadB r3L, 0
+EC9A5		LDX r2L				;c9a5
+		CPX #200
+		BEQ EC9E2
+		JSR ECCD1
+		JSR EF522
+		+bra EC9B7
+EC9B4		JSR ILin80_Help			;c9b4
+EC9B7		LDY r3L
+		STA E1B55,y
+		INC r3L
+		LDY r3H
+		AND E1B6D,y
+		ORA E1C2D,y
+		JSR EF573
+		INC r3H
+		INC r5L
+		BNE EC9D1
+		INC r5H
+EC9D1		DEC r4L				;c9d1
+		BNE EC9B4
+		+AddB r4H, r3H
+		INC r2L
+		DEC r2H
+		BNE EC9A5
+EC9E2		+PopB dispBufferOn		;c9e2
+		JMP SetMMUShareTop
+
+; check if all sprites are untouched?
+;c9e8
+EC9E8		LDX #0				;c9e8
+		STX E1B54
+		STX EC8BA
+		LDY #14
+		LDX #7
+EC9F4		STX r0L				;c9f4
+		STY r0H
+		LDA BitMask2,x
+		STA r9H
+		AND mobenble
+		BEQ ECA0F
+		JSR ECA15
+		BCC ECA0F
+		LDA r9H
+		ORA EC8BA
+		STA EC8BA
+ECA0F		DEY				;ca0f
+		DEY
+		DEX
+		BNE EC9F4
+		RTS
+
+; compare real status to own copy (last drawn?)
+; 1b54 - kind of 'dirty' flag
+;ca15
+ECA15		LDA E1B54			;ca15
+		BNE ECA5B
+		LDA E887E,y
+		BPL ECA27
+		LDA #0
+		STA E887D,y
+		STA E887E,y
+ECA27		LDA E887D,y			;ca27
+		CMP E1303,y
+		BNE ECA58
+		LDA E887E,y
+		CMP E1304,y
+		BNE ECA58
+		LDA mob0ypos,y
+		CMP E1313,x
+		BNE ECA58
+		+CmpB mobx2, E1302
+		BNE ECA58
+		+CmpB moby2, E1301
+		BNE ECA58
+		LDA r9H
+		AND E1300
+		BEQ ECA58
+		CLC
+		RTS
+ECA58		INC E1B54			;ca58
+ECA5B		SEC				;ca5b
+		RTS
+
+; go to next VDC line
+;ca5d
+ECA5D		LDA #80				;ca5d !!!hint+AddVB r5, 80
+		+add r5L
+		STA r5L
+		LDA r5H
+		ADC #0
+		STA r5H
+		RTS
+
+;ca6b
+ECA6B		LDA EC8BA			;ca6b
+		BEQ ECA97
+		+LoadB r0L, 1
+		ASL
+		STA r0H
+		LSR EC8BA
+ECA7A		LSR EC8BA			;ca7a
+		BCC ECA8B
+		LDY r0H
+		LDX r0L
+		LDA BitMask2,x
+		STA r9H
+		JSR ECA98
+ECA8B		INC r0H				;ca8b
+		INC r0H
+		INC r0L
+		+CmpBI r0L, 8
+		BNE ECA7A
+ECA97		RTS				;ca97
+
+;ca98
+ECA98		JSR ECAB3			;ca98
+ECA9B		JSR ECBB9			;ca9b
+		JSR ECC45
+		JSR ECA5D
+		LDA r10H
+		BEQ ECAAE
+		JSR ECC45
+		JSR ECA5D
+ECAAE		DEC r11L
+		BNE ECA9B
+		RTS
+
+;this one does something with flags setup
+;cab3
+ECAB3		LDA EC818-1,x			;cab3
+		STA r4L
+		LDA EC81F-1,x
+		STA r4H
+		LDA EC826-1,x
+		STA r12L
+		LDA EC82D-1,x
+		STA r12H
+		LDA mob0ypos,y
+		+subv $32
+		TAX
+		STX r9L
+		JSR _GetScanLine_
+		LDX r0L
+		LDY #63
+		LDA (r4),y
+		STA r11H
+		AND #$7f
+		STA r11L
+		STA E1333,x
+		LDY r0H
+		LDA moby2
+		AND r9H
+		STA r10H
+		BEQ ECAF3
+		LDA r11L
+		ASL
+		STA E1333,x
+ECAF3		LDA #4				;caf3
+		STA E132B,x
+		LDA r11H
+		AND #$80
+		BEQ ECB03
+		LDA #2
+		STA E132B,x
+ECB03		LDA mobx2			;cb03
+		AND r9H
+		STA r10L
+		BEQ ECB1A
+		LDA E132B,x
+		ASL
+		STA E132B,x
+		CMP #4
+		BEQ ECB1A
+		DEC E132B,x
+ECB1A		LDA E887D,y			;cb1a
+		STA r8L
+		AND #7
+		STA r8H
+		LDA E887E,y
+		ROR
+		ROR r8L
+		ROR
+		ROR r8L
+		LSR r8L
+		+AddB r8L, r5L
+		STA E131B,y
+		LDA r5H
+		ADC #0
+		STA r5H
+		STA E131C,y
+		LDA #80
+		+sub r8L
+		BCS ECB4A
+		LDA #0
+ECB4A		CMP E132B,x			;cb4a
+		BCS ECB52
+		STA E132B,x
+ECB52		LDA #200			;cb52
+		+sub r9L
+		CMP E1333,x
+		BCS ECB67
+		STA E1333,x
+		STA r11L
+		LDA r10H
+		BEQ ECB67
+		LSR r11L
+ECB67		RTS				;cb67
+
+; this one seems to draw a sprite on screen
+;cb68
+ECB68		LDA EC826-1,x			;cb68
+		STA r3L
+		LDA EC82D-1,x
+		STA r3H
+		LDA E131B,y
+		STA r5L
+		LDA E131C,y
+		STA r5H
+		LDA E132B,x
+		STA r1L
+		LDA E1333,x
+		STA r1H
+ECB86		LDX r1L				;cb86
+		LDY #0
+		LDA (r3),y
+		JSR EF573
+		INY
+		DEX
+		BEQ ECBA1
+ECB93		BIT vdcreg			;cb93
+		BPL ECB93
+		LDA (r3),y
+		STA vdcdata
+		INY
+		DEX
+		BNE ECB93
+ECBA1		TYA				;cba1
+		+add r3L
+		STA r3L
+		LDA r3H
+		ADC #0
+		STA r3H
+		JSR ECA5D
+		DEC r1H
+		BNE ECB86
+		LDX r0L
+		LDY r0H
+		RTS
+
+;cbb9
+ECBB9		LDY #0				;cbb9
+		STY E1B48
+		STY E1B4B
+ECBC1		LDA (r4),y			;cbc1
+		STA E1B45,y
+		INY
+		CPY #3
+		BNE ECBC1
+		TYA
+		+add r4L
+		STA r4L
+		LDA r4H
+		ADC #0
+		STA r4H
+		LDA r10L
+		BEQ ECBDE
+		JSR ECC13
+ECBDE		LDA r8H				;cbde
+		BEQ ECC0E
+		TAX
+		BIT r11H			;!!!hint macro
+		BPL ECBF6
+		LDA r10L
+		BNE ECBF6
+ECBEB		LSR E1B45			;cbeb
+		ROR E1B46
+		DEX
+		BNE ECBEB
+		BEQ ECC0E
+ECBF6		LSR E1B45			;cbf6
+		ROR E1B46
+		ROR E1B47
+		ROR E1B48
+		ROR E1B49
+		ROR E1B4A
+		ROR E1B4B
+		DEX
+		BNE ECBF6
+ECC0E		LDX r0L
+		LDY r0H
+		RTS
+
+;cc13
+ECC13		BIT r11H			;cc13 !!!hint macro
+		BMI ECC1F
+		LDX #4
+		LDA E1B47
+		JSR ECC2C
+ECC1F		LDX #2				;cc1f
+		LDA E1B46
+		JSR ECC2C
+		LDX #0
+		LDA E1B45
+ECC2C		STA r2L				;cc2c
+		AND #$0f
+		TAY
+		LDA EC834,y
+		STA E1B46,x
+		LDA r2L
+		LSR
+		LSR
+		LSR
+		LSR
+		TAY
+		LDA EC834,y
+		STA E1B45,x
+		RTS
+
+;cc45
+ECC45		LDA E132B,x			;cc45
+		BEQ ECCA1
+		TAX
+		LDY #0
+		JSR EF522
+		STA (r12),y
+		ORA E1B45,y
+		STA E1B4C,y
+		INY
+		DEX
+		BEQ ECC70
+ECC5C		LDA vdcreg			;cc5c
+		BPL ECC5C
+		LDA vdcdata
+		STA (r12),y
+		ORA E1B45,y
+		STA E1B4C,y
+		INY
+		DEX
+		BNE ECC5C
+ECC70		LDX r0L				;cc70
+		LDA E132B,x
+		+add r12L
+		STA r12L
+		BCC ECC7E
+		INC r12H
+ECC7E		LDA E132B,x			;cc7e
+		TAX
+		LDY #0
+		LDA E1B4C,y
+		JSR EF573
+		INY
+		DEX
+		BEQ ECC9D
+ECC8E		BIT vdcreg			;cc8e
+		BPL ECC8E
+		LDA E1B4C,y
+		STA vdcdata
+		INY
+		DEX
+		BNE ECC8E
+ECC9D		LDX r0L				;cc9d
+		LDY r0H
+ECCA1		RTS				;cca1
+
+_TempHideMouse_					;cca2
+		+bbrf 7, graphMode, TmpHidMseEnd
+		JSR SetMMUShareBoth
+		BIT E8890
+		PHP
+		JSR SetMMUShareTop
+		PLP
+		BPL TmpHMse_0
+		LDA E1300
+		BEQ TmpHidMseEnd
+TmpHMse_0	LDX #0				;ccb8
+TmpHMse_1	LDA r0L,x			;ccba
+		PHA
+		INX
+		CPX #14
+		BNE TmpHMse_1
+		JSR EC8A5
+		JSR EC864
+		LDX #13
+TmpHMse_2	PLA				;ccca
+		STA r0L,x
+		DEX
+		BPL TmpHMse_2
+TmpHidMseEnd	RTS				;ccd0
+
+;ccd1
+ECCD1		JSR _GetScanLine_		;ccd1
+		LDA r1L
+		+add r5L
+		STA r5L
+		BCC ECCDF
+		INC r5H
+ECCDF		+LoadB r4H, 0			;ccdf
+		LDA #80
+		+sub r1L
+		CMP #3
+		BCC ECCF1
+		LDA #3
+		STA r4L
+		RTS
+ECCF1		STA r4L				;ccf1
+		EOR #3
+		STA r4H
+		RTS
+
+;ccf8
+ECCF8		+PushB dispBufferOn		;ccf8
+		+LoadB dispBufferOn, ST_WR_FORE
+		+MoveB E8893, r2L
+		+MoveB E8891, r1L
+		LDA E8892
+		LSR
+		ROR r1L
+		LSR
+		ROR r1L
+		LSR
+		ROR r1L
+		STA r1H
+		JSR SetMMUShareBoth
+		+LoadB r2H, 8
+		+LoadB r3L, 0
+ECD22		LDX r2L				;cd22
+		CPX #200
+		BEQ ECD45
+		JSR ECCD1
+ECD2B		LDY r3L				;cd2b
+		LDA E1B55,y
+		JSR EF573
+		INC r3L
+		INC r5L
+		BNE ECD3B
+		INC r5H
+ECD3B		DEC r4L				;cd3b
+		BNE ECD2B
+		INC r2L
+		DEC r2H
+		BNE ECD22
+ECD45		+PopB dispBufferOn		;cd45
+SetMMUShareTop	LDA #%00001000			;cd48	share top
+		!byte $2c
+SetMMUShareBoth	LDA #%00001100			;cd4b	share both
+		STA SetMMUShare+1
+		LDA mmu+6
+		AND #%11110011
+SetMMUShare	ORA #$08			;cd55
+		STA mmu+6
+		RTS
+
+_SetMousePicture_				;cd5b
+		LDA r0H
+		BNE SMsePic_1
+		LDA r0L
+		CMP #1
+		BCS SMsePic_1
+		LDX #4
+SMsePic_0	ASL r0L				;cd67
+		ROL r0H
+		DEX
+		BPL SMsePic_0
+		LDA r0L
+		+addv $44
+		STA r0L
+		LDA r0H
+		ADC #200
+		STA r0H
+SMsePic_1	+LoadW r1, E1B6D		;cd7b
+		LDX #0
+SMsePic_2	+LoadB r4L, 8			;cd85
+SMsePic_3	LDY #0				;cd89
+		LDA (r0),y
+		STA r2H
+		INY
+		LDA (r0),y
+		STA r3L
+		LDY #0
+		CPX #8
+		BCS SMsePic_4
+		DEY
+SMsePic_4	STY r3H				;cd9b
+		STY r2L
+		+AddVW r0, 2
+		TXA
+		AND #7
+		TAY
+		BEQ SMsePic_6
+SMsePic_5	LSR r2L				;cdb0
+		ROR r2H
+		ROR r3L
+		ROR r3H
+		DEY
+		BNE SMsePic_5
+SMsePic_6	JSR SetMMUShareBoth		;cdbb
+		LDY #2
+SMsePic_7	LDA r2H,y			;cdc0
+		STA (r1),y
+		DEY
+		BPL SMsePic_7
+		JSR SetMMUShareTop
+		+AddVW 3, r1
+		DEC r4L
+		BNE SMsePic_3
+		INX
+		CPX #8
+		BEQ SMsePic_8
+		+SubVW 16, r0
+SMsePic_8	CPX #16				;cdec
+		BNE SMsePic_2
+		RTS
+
+;cdf1-d000 seems to be data or unused code
