@@ -2457,24 +2457,24 @@ EF52D		STX EF5A4			;f52d
 		BNE EF57D
 
 ;f534 - this is never refereneced
-EF534		+bbsf 7, dispBufferOn, EF53F	;f534
-		BVC EF53F
-		LDY #0
-		ORA (r5),y
-		RTS
-EF53F		STX EF5A4			;f53f
-		LDX #$0d
-		BNE EF57D
+;EF534		+bbsf 7, dispBufferOn, EF53F	;f534
+;		BVC EF53F
+;		LDY #0
+;		ORA (r5),y
+;		RTS
+;EF53F		STX EF5A4			;f53f
+;		LDX #$0d
+;		BNE EF57D
 
 ;f53f - this is never referenced
-EF546		+bbsf 7, dispBufferOn, EF551	;f546
-		BVC EF551
-		LDY #0
-		EOR (r5),y
-		RTS
-EF551		STX EF5A4			;f551
-		LDX #$4d
-		BNE EF57D
+;EF546		+bbsf 7, dispBufferOn, EF551	;f546
+;		BVC EF551
+;		LDY #0
+;		EOR (r5),y
+;		RTS
+;EF551		STX EF5A4			;f551
+;		LDX #$4d
+;		BNE EF57D
 
 ;called from Read/Write80Help
 EF558		+bbsf 7, dispBufferOn, EF563	;f558
