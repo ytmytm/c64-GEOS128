@@ -14,3 +14,13 @@
 - look what can be done with relocatable stack and PHA/PLA for memory copying/fill functions
 - look what can be done with Z80
 - look how VDC code can be speed-up with blitter abilities
+
+
+Proposed Layout: bank0
+
+$4800-$4c00	- relocator for those below
+$4c00-$5000	- InitKernal code	->$15000
+$5000-$9000	- bank1 kernal		->$1c000
+$9000-$a000	- bank1 disk driver	->$19000
+$a000-$c000	- bank0 kernal high	->$0e000
+$c000-$d000	- bank0 kernal low	->$0c000
