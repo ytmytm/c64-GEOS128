@@ -30,6 +30,7 @@
 
 		    *=OS_ROM
 !source "src/kernal1-1.tas"
+		    *=OS_JUMPTAB
 !source "src/c100jmp.tas"
 !source "src/kernal1-2.tas"
 ;--------------------------------------------
@@ -39,10 +40,22 @@ PatternTab	!binary "bin/patterns.bin"	    ;cef0
 		!byte $80, $10, $02, $20, $01, $08, $40, $04
 ;--------------------------------------------
 ;kernal under I/O, partially, rest is printer driver backup and fileHeader backup (bank0?)
+		    *=$d000
 !source "src/kernal2.tas"
 ;--------------------------------------------
 		    *=$e000
 !source "src/e000jmp.tas"
 !source "src/kernal3.tas"
 !source "src/kernal4.tas"
+		    *=$fd00
+!source "src/joystick.tas"
+		    *=$fe80
 !source "src/kernal5.tas"
+		    *=$ff04
+!source "src/kernal6.tas"
+; CBM kernal jumptable
+		    *=$ff81
+		!for Count, 38 {
+		JSR ExecCBMKernal
+		}
+		RTS				;fff3
