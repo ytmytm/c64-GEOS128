@@ -14,7 +14,7 @@ IDEAS
 - look what can be done with Z80 (and string operations)
 - look how Rectangle functions can be used with HorizontalLine without recalculating whole
   thing for each line
-- reassemble 1571 driver and look how BURST mode can be used within it
+- reassemble 1571/81 driver and look how BURST mode can be used within it
 
 Proposed Layout: bank0
 
