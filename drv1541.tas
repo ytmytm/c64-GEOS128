@@ -469,9 +469,8 @@ __InitForIO					;9479
 		PLA
 		STA tmpPS
 		SEI
-		LDA CPU_DATA
-		STA tmpCPU_DATA
-;;		+LoadB CPU_DATA, KRNL_IO_IN
+		LDA CPU_DATA		;!!! hint
+		STA tmpCPU_DATA		;!!! hint
 		LDA grirqen
 		STA tmpgrirqen
 		LDA clkreg
@@ -485,11 +484,9 @@ __InitForIO					;9479
 		STA cia2base+13
 		LDA #>D_IRQHandler
 		STA irqvec+1
+		STA nmivec+1
 		LDA #<D_IRQHandler
 		STA irqvec
-		LDA #>D_NMIHandler
-		STA nmivec+1
-		LDA #<D_NMIHandler
 		STA nmivec
 		LDA #%00111111
 		STA cia2base+2
@@ -526,7 +523,7 @@ D_IRQHandler
 		PLA
 		TAX
 		PLA
-D_NMIHandler	RTI				;9503
+		RTI
 
 __DoneWithIO	SEI				;9504
 		LDA tmpclkreg
@@ -537,8 +534,6 @@ __DoneWithIO	SEI				;9504
 		LDA cia2base+13
 		LDA tmpgrirqen
 		STA grirqen
-;;		LDA tmpCPU_DATA
-;;		STA CPU_DATA
 		LDA tmpPS
 		PHA
 		PLP
@@ -1465,7 +1460,7 @@ CacheTabH					;9cd7
 tmpclkreg	!byte 0				;9cfb
 tmpPS		!byte 0				;9cfc
 tmpgrirqen	!byte 0				;9cfd
-tmpCPU_DATA	!byte 0				;9cfe
+tmpCPU_DATA	!byte 0				;9cfe	;!!! hint
 tmpmobenble	!byte 0				;9cff
 		!byte 0				;9d00
 DExeProc	!word 0				;9d01
