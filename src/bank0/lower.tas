@@ -1,32 +1,5 @@
 
 ; 18-08-2000, 29-08, 01-08 2000, 14.07.2001
-E1300	= $1300		; mobenble copy
-E1301	= $1301		; moby2 copy
-E1302	= $1302		; mobx2 copy
-E1303	= $1303
-E1304	= $1304
-E1313	= $1313
-E131B	= $131b
-E131C	= $131c
-E132B	= $132b
-E1333	= $1333
-E133B	= $133b		; data tables up to 1b45
-
-E1B45	= $1b45		; 7 byte buffer
-E1B4C	= $1b4c
-E1B54	= $1b54		; dirty flag - if nonzero sprites are redrawn
-E1B55	= $1b55
-E1B6D	= $1b6d		; data of 192(200?) bytes
-E1C2D	= $1c2d		; as above
-
-E887D	= $887d
-E887E	= $887e
-
-E8890	= $8890
-E8891	= $8891		; copy of X - Lo position of pointer
-E8892	= $8892		; X - Hi
-E8893	= $8893		; Y
-
 		;*=$c78d
 _BldGDirEntry_					;c78d
 		LDY #$1d

@@ -73,7 +73,7 @@ EE093		INY				;e093
 		JSR SetMMUShareBoth
 		+MoveB r5L, E0E2D
 		LDY #2
-EE0AE		LDA E1C00,y			;e0ae
+EE0AE		LDA BASICspace,y			;e0ae
 		STA E0E29,y
 		DEY
 		BPL EE0AE
@@ -160,7 +160,7 @@ EE172		LDA cia2base+13			;e172 - is it E0EDA?
 		+LoadB cia2base+13, $7f
 		LDX #2
 EE191		LDA E0E29,x			;e191
-		STA E1C00,x
+		STA BASICspace,x
 		DEX
 		BPL EE191
 		LDA #$0d

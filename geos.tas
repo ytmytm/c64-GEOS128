@@ -2,7 +2,7 @@
 ;GEOS Kernal makefile
 ;by Maciej 'YTM/Elysium' Witkowiak
 ;19,20-3-99; 20-4; 6-6; 17-8
-;27.07.2000, 1.8
+;27.07.2000, 1.8.2000, 15.7.2001
 
 ;This is makefile for GEOS KERNAL
 
@@ -16,11 +16,17 @@
 !source "inc/geosmac.inc"
 !source "inc/kernal.inc"
 !source "inc/diskdrv.inc"
+!source "inc/equ.inc"
+
+;part of memory config
+fileHeadMemBuff	= $d8c0		;$0100 len
+prntDrvMemBuff	= $d9c0		;$0640 len -> $e000
 
 ;rules for compiling
 !source "inc/equ.inc"
 
 		    *=$5000
+InitKernal
 !source "src/booter.tas"
 
 		    *=$9000
@@ -45,7 +51,7 @@ PatternTab	!binary "bin/patterns.bin"	    ;cef0
 		!byte $b1, $30, $03, $1b, $d8, $c0, $0c, $8d
 		!byte $80, $10, $02, $20, $01, $08, $40, $04
 ;--------------------------------------------
-;kernal under I/O, partially, rest is printer driver backup and fileHeader backup (bank0?)
+;kernal under I/O, partially, rest is printer driver backup and fileHeader backup
 		    *=$d000
 !source "src/kernal2.tas"
 ;--------------------------------------------

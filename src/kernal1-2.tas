@@ -961,7 +961,7 @@ _PanicDB_DT					;cbd6
 		!byte NULL
 
 _GetSerialNumber				;cbdd
-		+MoveW SerialNumberValue, r0
+		+LoadW r0, SerialNumberValue
 		rts
 
 _DrawSprite					;cbe8

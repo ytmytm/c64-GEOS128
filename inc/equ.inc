@@ -29,7 +29,7 @@
 
 !set currentInterleave	= 8				; 8 for 1541, 6 for 1571
 !set SelectFlashDelay	= 10				; 10 in 1/50 s
-!set SerialNumbeValue	= $1cd5 			; $1cd5
+!set SerialNumberValue	= $1cd5 			; $1cd5
 
 ;if both menu separator patterns are null, then kernal menu code
 ;will be a bit optimized for speed and space
