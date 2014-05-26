@@ -1,0 +1,894 @@
+
+;GEOS 1571 disk driver
+;reassembled by Maciej 'YTM/Elysium' Witkowiak
+;25-26.02.2002, 2-4.03.2002
+; burst version - 08.03.2002, 29-30.03.2002
+
+; ADVANTAGES
+; - burst is really fast
+; - ability to use MFM formats (only 256 b. blocks, but some might be bigger than 1571)
+; - ease of porting to 1581 (?)
+; - ease of porting to remote drive emulators (64net/2, 64hdd, IDE64 (?))
+
+; DISADVANTAGES
+; - disk login doesn't work always for GCR, sometimes need to nearly unlock disk to
+;   make head move (like when reading bad sector) then everything is OK
+; - preparatory routines (listen/.../unlisten) take much time
+
+
+;BUGS
+; - no write_block yet
+; - locks when keyboard/joystick input, but IRQs are issued (CIA1 config?)
+
+;$ff47 is not in GEOS Kernal mirror!
+;$0a1c should be checked in BANK0!!!
+
+		    ;*=DISK_BASE
+
+serialFlag	= $0a1c	;!!! in BANK0 !!!
+
+cia1Data	= $dc0c
+cia1ICR		= $dc0d
+ciaSerialClk	= $dd00
+
+k_Listen	= $ffb1
+k_Second	= $ff93
+k_Ciout		= $ffa8
+k_Unlsn		= $ffae
+k_Spinp		= $ff47
+
+;
+e88b7 = $88b7
+;
+
+DriveAddy = $0300
+
+_InitForIO		!word __InitForIO		;9000
+_DoneWithIO		!word __DoneWithIO		;9002
+_ExitTurbo		!word __ExitTurbo		;9004
+_PurgeTurbo		!word __PurgeTurbo		;9006
+_EnterTurbo		!word __EnterTurbo		;9008
+_ChangeDiskDevice	!word __ChangeDiskDevice	;900a
+_NewDisk		!word __NewDisk 		;900c
+_ReadBlock		!word __ReadBlock		;900e
+_WriteBlock		!word __WriteBlock		;9010
+_VerWriteBlock		!word __VerWriteBlock		;9012
+_OpenDisk		!word __OpenDisk		;9014
+_GetBlock		!word __GetBlock		;9016
+_PutBlock		!word __PutBlock		;9018
+_GetDirHead		!word __GetDirHead		;901a
+_PutDirHead		!word __PutDirHead		;901c
+_GetFreeDirBlk		!word __GetFreeDirBlk		;901e
+_CalcBlksFree		!word __CalcBlksFree		;9020
+_FreeBlock		!word __FreeBlock		;9022
+_SetNextFree		!word __SetNextFree		;9024
+_FindBAMBit		!word __FindBAMBit		;9026
+_NxtBlkAlloc		!word __NxtBlkAlloc		;9028
+_BlkAlloc		!word __BlkAlloc		;902a
+_ChkDkGEOS		!word __ChkDkGEOS		;902c
+_SetGEOSDisk		!word __SetGEOSDisk		;902e
+
+Get1stDirEntry		JMP _Get1stDirEntry		;9030
+GetNxtDirEntry		JMP _GetNxtDirEntry		;9033
+GetBorder		JMP _GetBorder			;9036
+AddDirBlock		JMP _AddDirBlock		;9039
+ReadBuff		JMP _ReadBuff			;903c
+WriteBuff		JMP _WriteBuff			;903f
+;;			JMP DUNK4_2			;9042
+			LDX #0
+			RTS
+;;			JMP GetDOSError 		;9045
+			LDX #0
+			RTS
+AllocateBlock		JMP _AllocateBlock		;9048
+ReadLink		JMP _ReadLink			;904b
+
+
+__GetDirHead	JSR SetDirHead_1		;904e
+		JSR __GetBlock
+		+bnex GDH_0
+		LDY curDrive
+		LDA curDirHead+3
+		STA e88b7,y
+		BPL GDH_0
+		JSR SetDirHead_2
+		JSR __GetBlock
+		LDA #6
+		BNE GDH_1
+GDH_0		LDA #8				;906c
+GDH_1		STA interleave			;906e
+		RTS
+
+_ReadBuff	+LoadW r4, diskBlkBuf		;9072
+__GetBlock	JSR EnterTurbo			;907a
+		BNE GetBlk0
+		JSR InitForIO
+		JSR ReadBlock
+		JSR DoneWithIO
+GetBlk0 	RTS				;9088
+
+__PutDirHead	JSR EnterTurbo			;9089
+		JSR InitForIO
+		JSR SetDirHead_1
+		JSR WriteBlock
+		+bnex PDH_1
+		LDY curDrive
+		LDA curDirHead+3
+		STA e88b7,y
+		BPL PDH_0
+		JSR SetDirHead_2
+		JSR WriteBlock
+		+bnex PDH_1
+PDH_0		JSR SetDirHead_1		;90ac
+		JSR VerWriteBlock
+		+bnex PDH_1
+		+bbrf 7, curDirHead+3, PDH_1
+		JSR SetDirHead_2
+		JSR VerWriteBlock
+PDH_1		JMP DoneWithIO			;90c3
+
+_WriteBuff	+LoadW r4, diskBlkBuf		;90c6
+__PutBlock	JSR EnterTurbo			;90ce
+		BNE PutBlk1
+		JSR InitForIO
+		JSR WriteBlock
+		+bnex PutBlk0
+		JSR VerWriteBlock
+PutBlk0 	JSR DoneWithIO			;90df
+PutBlk1 	RTS				;90e2
+
+SetDirHead_1	LDY #$12			;90e3
+		LDA #>curDirHead
+		BNE SDH_1
+SetDirHead_2	LDY #$35			;90e9
+		LDA #>dir2Head
+SDH_1		STY r1L				;90ed
+		STA r4H
+		LDA #0
+		STA r1H
+		STA r4L
+		RTS
+
+CheckParams	LDA #0				;90f8
+		STA errCount
+		LDX #INV_TRACK
+		LDA r1L
+		BEQ CheckParams_2
+		CMP #$24
+		BCC CheckParams_1
+		LDY curDrive
+		LDA e88b7,y
+		BPL CheckParams_2
+		LDA r1L
+		CMP #$47
+		BCS CheckParams_2
+CheckParams_1	SEC				;9115
+		RTS
+CheckParams_2	CLC				;9117
+		RTS
+
+__OpenDisk					;9119
+		JSR NewDisk
+		+bnex OpenDsk1
+		JSR GetDirHead
+		+bnex OpenDsk1
+		JSR SetCurDHVec
+		JSR ChkDkGEOS
+		+LoadW r4, curDirHead+OFF_DISK_NAME
+		LDX #r5
+		JSR GetPtrCurDkNm
+		LDX #r4
+		LDY #r5
+		LDA #18
+		JSR CopyFString
+		LDX #0
+OpenDsk1	RTS				;9143
+
+__BlkAlloc					;9144
+		LDY #1
+		STY r3L
+		DEY
+		STY r3H
+__NxtBlkAlloc	+PushW r9			;914b
+		+PushW r3
+		+LoadW r3, $00fe
+		LDX #r2
+		LDY #r3
+		JSR Ddiv
+		LDA r8L
+		BEQ BlkAlc0
+		INC r2L
+		BNE *+4
+		INC r2H
+BlkAlc0 	JSR SetCurDHVec			;9170
+		JSR CalcBlksFree
+		+PopW r3
+		LDX #INSUFF_SPACE
+		+CmpW r2, r4
+		BEQ BlkAlc1
+		BCS BlkAlc4
+BlkAlc1 	+MoveW r6, r4			;918c
+		+MoveW r2, r5
+BlkAlc2 	JSR SetNextFree 		;919c
+		+bnex BlkAlc4
+		LDY #0
+		LDA r3L
+		STA (r4),y
+		INY
+		LDA r3H
+		STA (r4),y
+		+AddVW 2, r4
+BlkAlc2_1	LDA r5L				;91b8
+		BNE *+4
+		DEC r5H
+		DEC r5L
+		LDA r5L
+		ORA r5H
+		BNE BlkAlc2
+		LDY #0
+		TYA
+		STA (r4),y
+		INY
+		LDA r8L
+		BNE BlkAlc3
+		LDA #$fe
+BlkAlc3 	CLC				;91d2
+		ADC #1
+		STA (r4),y
+		LDX #0
+BlkAlc4 	+PopW r9			;91d9
+		RTS
+
+SetCurDHVec	+LoadW r5, curDirHead		;91e0
+		RTS
+
+_Get1stDirEntry					;91e9
+		+LoadB r1L, 18
+		LDY #1
+		STY r1H
+		DEY
+		STY borderFlag
+		BEQ GNDirEntry0
+
+_GetNxtDirEntry 				;91f7
+		LDX #0
+		LDY #0
+		+AddVW $20, r5
+		+CmpWI r5, diskBlkBuf+$ff
+		BCC GNDirEntry1
+		LDY #$ff
+		+MoveW diskBlkBuf, r1
+		BNE GNDirEntry0
+		LDA borderFlag
+		BNE GNDirEntry1
+		LDA #$ff
+		STA borderFlag
+		JSR GetBorder
+		+bnex GNDirEntry1
+		TYA
+		BNE GNDirEntry1
+GNDirEntry0	JSR ReadBuff			;9233
+		LDY #0
+		+LoadW r5, diskBlkBuf+FRST_FILE_ENTRY
+GNDirEntry1	RTS				;9240
+
+_GetBorder					;9241
+		JSR GetDirHead
+		+bnex GetBord2
+		JSR SetCurDHVec
+		JSR ChkDkGEOS
+		BNE GetBord0
+		LDY #$ff
+		BNE GetBord1
+GetBord0	+MoveW curDirHead+OFF_OP_TR_SC, r1	;9253
+		LDY #0
+GetBord1	LDX #0				;925f
+GetBord2	RTS				;9261
+
+__ChkDkGEOS					;9262
+		LDY #OFF_GS_ID
+		LDX #0
+		STX isGEOS
+ChkDkG0 	LDA (r5),y			;9269
+		CMP GEOSDiskID,x
+		BNE ChkDkG1
+		INY
+		INX
+		CPX #11
+		BNE ChkDkG0
+		+LoadB isGEOS, $ff
+ChkDkG1 	LDA isGEOS			;927b
+		RTS
+
+GEOSDiskID	!text "GEOS format V1.0",NULL	;927f
+
+__GetFreeDirBlk 				;9290
+		PHP
+		SEI
+		+PushB r6L
+		+PushW r2
+		LDX r10L
+		INX
+		STX r6L
+		+LoadB r1L, 18
+		+LoadB r1H, 1
+GFDirBlk0	JSR ReadBuff			;92a8
+GFDirBlk1	+bnex GFDirBlk5 		;92ab
+		DEC r6L
+		BEQ GFDirBlk3
+GFDirBlk11	LDA diskBlkBuf			;92b2
+		BNE GFDirBlk2
+		JSR AddDirBlock
+		+bra GFDirBlk1
+GFDirBlk2	STA r1L 			;92bd
+		+MoveB diskBlkBuf+1, r1H
+		+bra GFDirBlk0
+GFDirBlk3	LDY #FRST_FILE_ENTRY		;92c7
+		LDX #0
+GFDirBlk4	LDA diskBlkBuf,y		;9319
+		BEQ GFDirBlk5
+		TYA
+		+addv $20
+		TAY
+		BCC GFDirBlk4
+		+LoadB r6L, 1
+		LDX #FULL_DIRECTORY
+		LDY r10L
+		INY
+		STY r10L
+		CPY #$12
+		BCC GFDirBlk11
+GFDirBlk5	+PopW r2			;92e6
+		+PopB r6L
+		PLP
+		RTS
+
+_AddDirBlock					;92f1
+		+PushW r6
+		LDY #$48
+		LDX #FULL_DIRECTORY
+		LDA curDirHead,y
+		BEQ ADirBlk0
+		+MoveW r1, r3
+		JSR SetNextFree
+		+MoveW r3, diskBlkBuf
+		JSR WriteBuff
+		+bnex ADirBlk0
+		+MoveW r3, r1
+		JSR ClearAndWrite
+ADirBlk0	+PopW r6			;9326
+		RTS
+
+ClearAndWrite	LDA #0				;932d
+		TAY
+CAndWr0 	STA diskBlkBuf,y		;9330
+		INY
+		BNE CAndWr0
+		DEY
+		STY diskBlkBuf+1
+		JMP WriteBuff
+
+__SetNextFree					;933d
+		LDA r3H
+		+add interleave
+		STA r6H
+		+MoveB r3L, r6L
+		CMP #DIR_TRACK
+		BEQ SNxtFree1
+		CMP #$35
+		BEQ SNxtFree1
+SNxtFree00	LDA r6L 			;9351
+		CMP #DIR_TRACK
+		BEQ SNxtFree3
+		CMP #$35
+		BEQ SNxtFree3
+SNxtFree1	CMP #$24			;935b
+		BCC SNxtFree11
+		+addv $b9
+		TAX
+		LDA curDirHead,x
+		BNE SNxtFree12
+		BEQ SNxtFree3
+SNxtFree11	ASL				;936a
+		ASL
+		TAX
+		LDA curDirHead,x
+		BEQ SNxtFree3
+SNxtFree12	LDA r6L				;9372
+		JSR SNxtFreeHelp
+		LDA SecScTab,x
+		STA r7L
+		TAY
+SNxtFree2	JSR SNxtFreeHelp2		;937d
+		BEQ SNxtFreeEnd_OK
+		INC r6H
+		DEY
+		BNE SNxtFree2
+SNxtFree3	+bbrf 7, curDirHead+3, SNxtFree5 ;9387
+		+CmpBI r6L, $24
+		BCS SNxtFree4
+		+addv $23
+		STA r6L
+		BNE SNxtFree7
+SNxtFree4	+subv $22			;9399
+		STA r6L
+		BNE SNxtFree6
+SNxtFree5	INC r6L				;93a0
+		LDA r6L
+SNxtFree6	CMP #$24			;93a4
+		BCS SNxtFreeEnd_Err
+SNxtFree7	+sub r3L			;93a8
+		STA r6H
+		ASL
+		ADC #4
+		ADC interleave
+		STA r6H
+		+bra SNxtFree00
+SNxtFreeEnd_OK	+MoveW r6, r3			;93b8
+		LDX #0
+		RTS
+SNxtFreeEnd_Err	LDX #INSUFF_SPACE		;93c3
+		RTS
+
+SNxtFreeHelp	PHA				;93c6
+		CMP #$24
+		BCC SNFHlp
+		+subv $23
+SNFHlp		LDX #0				;93ce
+SNFHlp0 	CMP SecTrTab,x			;93d0
+		BCC SNFHlp1
+		INX
+		BNE SNFHlp0
+SNFHlp1 	PLA				;93d8
+		RTS
+
+SecTrTab	!byte 18, 25, 31, 36		;93da
+SecScTab	!byte 21, 19, 18, 17		;93de
+
+SNxtFreeHelp2	LDA r6H 			;93e2
+SNFHlp2_1	CMP r7L 			;93e4
+		BCC SNFHlp2_2
+		+sub r7L
+		+bra SNFHlp2_1
+SNFHlp2_2	STA r6H 			;93ee
+
+_AllocateBlock	JSR FindBAMBit			;93f0
+		BNE AllBlk0
+		LDX #BAD_BAM
+		RTS
+AllBlk0		PHP				;93f8
+		+CmpBI r6L, $24
+		BCC AllBlk1
+		LDA r8H
+		EOR dir2Head,x
+		STA dir2Head,x
+		+bra AllBlk2
+AllBlk1		LDA r8H				;940a
+		EOR curDirHead,x
+		STA curDirHead,x
+AllBlk2		LDX r7H				;9412
+		PLP
+		BEQ AllBlk3
+		DEC curDirHead,x
+		+bra AllBlk4
+AllBlk3		INC curDirHead,x		;941d
+AllBlk4		LDX #0				;9420
+		RTS
+
+__FreeBlock					;9423
+		JSR FindBAMBit
+		BEQ AllBlk0
+		LDX #BAD_BAM
+		RTS
+
+__FindBAMBit					;942B
+		LDA r6H
+		AND #%00000111
+		TAX
+		LDA FBBBitTab,x
+		STA r8H
+		+CmpBI r6L, $24
+		BCC FBB_0
+		+subv $24
+		STA r7H
+		LDA r6H
+		LSR
+		LSR
+		LSR
+		CLC
+		ADC r7H
+		ASL r7H
+		+add r7H
+		TAX
+		LDA r6L
+		+addv $b9
+		STA r7H
+		LDA dir2Head,x
+		AND r8H
+		RTS
+FBB_0		ASL				;945b
+		ASL
+		STA r7H
+		LDA r6H
+		LSR
+		LSR
+		LSR
+		SEC
+		ADC r7H
+		TAX
+		LDA curDirHead,x
+		AND r8H
+		RTS
+
+FBBBitTab	!byte $01, $02, $04, $08	;946e
+		!byte $10, $20, $40, $80
+
+__CalcBlksFree					;9476
+		+LoadW r4, 0
+		LDY #OFF_TO_BAM
+CBlksFre0	LDA (r5),y			;947e
+		+add r4L
+		STA r4L
+		BCC *+4
+		INC r4H
+CBlksFre1	TYA				;9489
+		+addv 4
+		TAY
+		CPY #$48
+		BEQ CBlksFre1
+		CPY #$90
+		BNE CBlksFre0
+		+LoadW r3, $0298
+		+bbrf 7, curDirHead+3, CBlksFre4
+		LDY #$DD
+CBlksFre2	LDA (r5),y			;94a5
+		+add r4L
+		STA r4L
+		BCC *+4
+		INC r4H
+CBlksFre3	INY				;94b0
+		BNE CBlksFre2
+		ASL r3L
+		ROL r3H
+CBlksFre4	RTS				;94b7
+
+__SetGEOSDisk					;94b8
+		JSR GetDirHead
+		+bnex SetGDisk2
+		JSR SetCurDHVec
+		JSR CalcBlksFree
+		LDX #INSUFF_SPACE
+		LDA r4L
+		ORA r4H
+		BEQ SetGDisk2
+		+LoadB r3L, DIR_TRACK+1
+		+LoadB r3H, 0
+		JSR SetNextFree
+		+beqx SetGDisk0
+		+LoadB r3L, 1
+		JSR SetNextFree
+		+bnex SetGDisk2
+SetGDisk0	+MoveW r3, r1			;94e4
+		JSR ClearAndWrite
+		+bnex SetGDisk2
+		+MoveW r1, curDirHead+OFF_OP_TR_SC
+		LDY #OFF_GS_ID+15
+		LDX #15
+SetGDisk1	LDA GEOSDiskID,x		;9500
+		STA curDirHead,y
+		DEY
+		DEX
+		BPL SetGDisk1
+		JSR PutDirHead
+SetGDisk2	RTS				;950d
+
+__InitForIO					;950e
+		PHP
+		PLA
+		STA tmpPS
+		SEI
+;;		LDA CPU_DATA
+;;		STA tmpCPU_DATA
+		LDA grirqen
+		STA tmpgrirqen
+		LDA clkreg
+		STA tmpclkreg
+		LDY #0
+		STY clkreg
+		STY grirqen
+		LDA #%01111111
+		STA grirq
+		STA cia1base+13
+		STA cia2base+13
+		LDA #>D_IRQHandler
+		STA irqvec+1
+		STA nmivec+1
+		LDA #<D_IRQHandler
+		STA irqvec
+		STA nmivec
+		LDA #%00111111
+		STA cia2base+2
+		LDA mobenble
+		STA tmpmobenble
+		STY mobenble
+		STY cia2base+5
+		INY
+		STY cia2base+4
+		+LoadB cia2base+13, %10000001
+		+LoadB cia2base+14, %00001001
+;;		LDY #$2c
+;;IniForIO0	LDA rasreg			;9571
+;;		CMP TURBO_DD00_CPY
+;;		BEQ IniForIO0
+;;		STA TURBO_DD00_CPY
+;;		DEY
+;;		BNE IniForIO0
+;;		LDA cia2base
+;;		AND #%00000111
+;;		STA TURBO_DD00
+;;		ORA #%00110000
+;;		STA TURBO_DD00_CPY
+;;		LDA TURBO_DD00
+;;		ORA #%00010000
+;;		STA tmpDD00_2
+;;		LDY #$1f
+;;IniForIO1	LDA NibbleTab2,y		;9591
+;;		AND #%11110000
+;;		ORA TURBO_DD00
+;;		STA NibbleTab2,y
+;;		DEY
+;;		BPL IniForIO1
+		RTS
+
+D_IRQHandler	
+	+PopB $ff00	;!!! is this what it should be?
+		PLA				;959f
+		TAY
+		PLA
+		TAX
+		PLA
+		RTI				;95a4
+
+__DoneWithIO	SEI				;95a5
+		LDA tmpclkreg
+		STA clkreg
+		LDA tmpmobenble
+		STA mobenble
+		+LoadB cia2base+13, %01111111
+		LDA cia2base+13
+		LDA tmpgrirqen
+		STA grirqen
+		LDA tmpPS
+		PHA
+		PLP
+		RTS
+
+; InitForIO/DoneWithIO around!
+SendDOSCmd	STX z8c 			;95cb
+		STA z8b
+		STY z8d
+		+LoadB STATUS, 0
+		LDA curDrive
+		JSR k_Listen
+		+bbsf 7, STATUS, SndDOSCmd1
+		LDA #$6f
+		JSR k_Second
+		+bbsf 7, STATUS, SndDOSCmd1
+		LDY #0
+SndDOSCmd0	LDA (z8b),y			;95e8
+		JSR k_Ciout
+		INY
+		CPY z8d
+		BCC SndDOSCmd0
+		JSR k_Unlsn
+		LDX #0
+		RTS
+SndDOSCmd1	JSR k_Unlsn			;95f5
+		LDX #DEV_NOT_FOUND
+		RTS
+
+__EnterTurbo					;95fb
+		LDA curDrive
+		JMP SetDevice
+
+__PurgeTurbo
+__ExitTurbo					;97b3
+		+LoadB interleave, 8
+		RTS
+
+__ChangeDiskDevice				;97a6
+		STA ChngDskDev_Number
+		PHA
+		JSR InitForIO
+		LDX #>ChngDskDev_Command
+		LDA #<ChngDskDev_Command
+		LDY #4
+DOSCmdOnly	JSR SendDOSCmd
+		+bnex DOSCmdErr
+		+PopB curDrive
+		STA curDevice
+DOSCmdErr	JMP DoneWithIO			;97c6
+
+ChngDskDev_Command				;97c9
+		!text "U0>"
+ChngDskDev_Number				;97cc
+		!byte 8
+
+__NewDisk					;9854
+		JSR InitForIO
+;;		LDX #>NewDiskCommand
+;;		LDA #<NewDiskCommand
+;;		LDY #1
+;;		JSR SendDOSCmd
+;;		+bnex NewDiskErr
+;;		LDX #>InquireDisk_Cmd
+;;		LDA #<InquireDisk_Cmd
+;;		LDY #3
+		LDX #>QueryDisk_Cmd
+		LDA #<QueryDisk_Cmd
+		LDY #4
+		JSR SendDOSCmd
+NewDiskErr	JMP DoneWithIO
+
+;;NewDiskCommand	!text "I"
+;;InquireDisk_Cmd	!text "U0"
+;;			!byte 4
+QueryDisk_Cmd
+		!text "U0"
+		!byte 138,18		;QueryDisk on track 18
+
+__ReadBlock
+_ReadLink					;987b
+		JSR CheckParams
+		BCS RdLink0
+		LDY #0
+		RTS
+RdLink0		; perform reading
+		JSR InitForIO
+		LDA r1L
+		STA ReadBlk_CmdTr
+		STA ReadBlk_CmdTr2
+		LDA r1H
+		STA ReadBlk_CmdSec
+ 	lda #2
+	sta $d020
+		+LoadB STATUS, 0
+
+		;; alter memory configuration to avoid GEOS trampolines
+		+PushB $ff00
+		+PushB $d506
+		+LoadB $d506, %01000110		; share bottom $2000 to have serialFlag
+		+LoadB $ff00, %01001110 	; bank 1 with HI-ROM and I/O
+
+		lda serialFlag
+		and #%10111111
+		sta serialFlag
+		LDA curDrive
+		JSR k_Listen
+		BIT STATUS
+		BPL RdDev
+		JSR k_Unlsn
+	lda #1
+	sta $d020
+		LDA #DEV_NOT_FOUND
+		JMP RdLinkErr
+
+RdDev		LDA #$6f
+		JSR k_Second
+		LDY #0
+RdLink1		LDA ReadBlk_Command,y
+		JSR k_Ciout
+		INY
+		CPY #7
+		BNE RdLink1
+
+		JSR k_Unlsn
+		LDA serialFlag
+		AND #%01000000
+		BNE RdBurst
+	lda #3
+	sta $d020
+		LDA #DEV_NOT_FOUND	; not a burst
+		JMP RdLinkErr
+
+RdBurst		+LoadB $d506, %01000000	; no sharing - all is bank 1
+		+LoadB $ff00, %01001110 ; bank 1 with HI-ROM and I/O
+		SEI
+		CLC
+		JSR k_Spinp
+		BIT cia1ICR
+		LDA ciaSerialClk
+		EOR #$10
+		STA ciaSerialClk
+
+RdBurstRead	LDA #8
+		BIT cia1ICR
+		BEQ *-3
+		LDA ciaSerialClk
+		EOR #$10
+		STA ciaSerialClk
+
+		LDA cia1Data
+		STA STATUS
+		AND #%00001111
+		CMP #2
+		BCS RdLinkErr
+
+		LDY #0
+RdBurstLp	LDA ciaSerialClk
+		EOR #$10
+		TAX
+		LDA #8
+		BIT cia1ICR
+		BEQ *-3
+		STX ciaSerialClk
+		LDA cia1Data
+		STA (r4),y
+		INY
+		BNE RdBurstLp
+		LDA #0		; no error
+
+RdLinkErr	STA STATUS
+		+PopB $d506
+		+PopB $ff00
+		JSR DoneWithIO
+		LDX STATUS
+	lda #0
+	sta $d020
+		RTS
+
+ReadBlk_Command
+		!text "U0"
+		!byte $00
+ReadBlk_CmdTr	!byte 1
+ReadBlk_CmdSec	!byte 0
+		!byte 1
+ReadBlk_CmdTr2	!byte 1
+
+__WriteBlock					;9899
+	ldx #0
+	rts
+		JSR CheckParams
+		BCS WrBlock0
+		RTS
+WrBlock0	; perform write
+		JSR InitForIO
+		LDA r1L
+		STA WriteBlk_CmdTr
+		STA WriteBlk_CmdTr2
+		LDA r1H
+		STA WriteBlk_CmdSec
+		; ...
+		RTS
+WriteBlk_Command
+		!text "U0"
+		!byte $02
+WriteBlk_CmdTr	!byte 1
+WriteBlk_CmdSec	!byte 0
+		!byte 1
+WriteBlk_CmdTr2	!byte 1
+
+__VerWriteBlock 				;98b8
+		JSR CheckParams
+		BCS VWrBlock0
+		RTS
+VWrBlock0	; perform write, then
+		; read, if failed -> upto tryCount=3
+		; if read failed -> again, upto errCount=5
+		JMP _WriteBlock
+
+;;DOSErrTab	!byte $01, $05, $02, $08	;9946
+;;		!byte $08, $01, $05, $01
+;;		!byte $05, $05, $05
+
+tmpclkreg	!byte 0				;9d4c
+tmpPS 		!byte 0				;9d4d
+tmpgrirqen	!byte 0		 		;9d4e
+tmpmobenble	!byte 0				;9d50
+
+errCount 	!byte 0				;9d57
+;;errStore	!byte 0				;9d58
+tryCount	!byte 0				;9d59
+
+borderFlag 	!byte 0				;9d5a
+
