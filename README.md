@@ -29,7 +29,7 @@ any hardware configuration and with any applications.
 #REQUIREMENTS
 The only tool required is ACME (version at least 0.07). It may be obtained
 from:
-http://home.pages.de/~mac_bacon/acme/
+http://sourceforge.net/projects/acme-crossass/
 
 #ASSEMBLY
 Just issue command:
